@@ -4,6 +4,7 @@ namespace ChlodAlejandro\ElectionGuard\Schema\Manifest;
 
 use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use ChlodAlejandro\ElectionGuard\Utilities;
 use DateTime;
 use InvalidArgumentException;
 
@@ -91,15 +92,6 @@ class Manifest implements ISerializable {
      * @var BallotStyle[]
      */
     public $ballotStyles;
-
-    /**
-     * Checks if a value can be included in the election manifest.
-     * @param $value
-     * @return string
-     */
-    public static function filter($value): string {
-        return isset($value);
-    }
 
     public function getName(): TextContainer {
         return $this->name;
@@ -251,6 +243,17 @@ class Manifest implements ISerializable {
     }
 
     /**
+     * Get all contests of a specific ballot style.
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle $ballotStyle
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest[]
+     */
+    public function getBallotStyleContests(BallotStyle $ballotStyle): array {
+        return array_filter($this->contests ?? [], function (Contest $contest) use ($ballotStyle) {
+            return in_array($contest->electoralDistrict, $ballotStyle->geopoliticalUnits);
+        });
+    }
+
+    /**
      * @inheritDoc
      */
     function serialize(): array {
@@ -268,7 +271,7 @@ class Manifest implements ISerializable {
             "contests" => SerializableUtils::serializeArray($this->contests),
             "ballot_styles" => SerializableUtils::serializeArray($this->ballotStyles)
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

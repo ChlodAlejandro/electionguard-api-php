@@ -4,6 +4,7 @@ namespace ChlodAlejandro\ElectionGuard\Schema\Manifest;
 
 use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use ChlodAlejandro\ElectionGuard\Utilities;
 
 class Party implements ISerializable {
 
@@ -86,7 +87,7 @@ class Party implements ISerializable {
             "color" => $this->color,
             "logo_uri" => $this->logoUri
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

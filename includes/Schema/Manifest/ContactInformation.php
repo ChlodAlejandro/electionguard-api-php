@@ -3,6 +3,7 @@
 namespace ChlodAlejandro\ElectionGuard\Schema\Manifest;
 
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use ChlodAlejandro\ElectionGuard\Utilities;
 
 /**
  * Represents contact information of a user.
@@ -43,7 +44,7 @@ class ContactInformation implements ISerializable {
             "email" => SerializableUtils::serializeArray($this->email),
             "phone" => SerializableUtils::serializeArray($this->phone)
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

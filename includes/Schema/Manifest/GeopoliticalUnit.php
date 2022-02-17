@@ -105,7 +105,7 @@ class GeopoliticalUnit implements ISerializable {
             "type" => $this->type,
             "contact_information" => $this->contactInformation->serialize()
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

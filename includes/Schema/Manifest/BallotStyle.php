@@ -115,7 +115,7 @@ class BallotStyle implements ISerializable {
             }, $this->parties) : null,
             "image_uri" => $this->imageUri
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

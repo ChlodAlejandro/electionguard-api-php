@@ -22,4 +22,13 @@ class Utilities {
         return implode('_', $ret);
     }
 
+    /**
+     * Checks if a value can be included in the election manifest.
+     * @param $value
+     * @return string
+     */
+    public static function filter($value): string {
+        return isset($value);
+    }
+
 }

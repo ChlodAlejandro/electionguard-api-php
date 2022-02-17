@@ -1,8 +1,12 @@
 <?php
 
-namespace ChlodAlejandro\ElectionGuard\Schema\Guardian;
+namespace ChlodAlejandro\ElectionGuard\API;
 
-class GuardianGenerationInfo {
+use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
+use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use ChlodAlejandro\ElectionGuard\Utilities;
+
+class GuardianGenerationInfo implements ISerializable {
 
     /** @var string Guardian ID template. */
     private $id;
@@ -19,6 +23,10 @@ class GuardianGenerationInfo {
         $this->quorum = $quorum ?? $guardianCount;
 
         $this->sequenceOrder = $sequenceOrder ?? 0;
+    }
+
+    public function generateObjectId(): string {
+        return $this->getId() . "_" . $this->getSequenceOrder();
     }
 
     public function getId(): string {
@@ -39,6 +47,19 @@ class GuardianGenerationInfo {
 
     public function bumpSequenceOrder(): int {
         return ++$this->sequenceOrder;
+    }
+
+    public function serialize(): array {
+        return array_filter([
+            "id" => $this->generateObjectId(),
+            "number_of_guardians" => $this->getGuardianCount(),
+            "quorum" => $this->getQuorum(),
+            "sequence_order" => $this->getSequenceOrder()
+        ], function ($v) { return Utilities::filter($v); });
+    }
+
+    public function validate(): bool {
+        return true;
     }
 
 }

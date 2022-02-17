@@ -200,7 +200,7 @@ class Contest implements ISerializable {
             "ballot_title" => $this->ballotTitle,
             "ballot_subtitle" => $this->ballotSubtitle
         ], function ($v) {
-            return Manifest::filter($v);
+            return Utilities::filter($v);
         });
     }
 

@@ -4,9 +4,10 @@ require_once __DIR__ . "/../vendor/autoload.php";
 include_once __DIR__ . "/TestDataHandler.php";
 
 use ChlodAlejandro\ElectionGuard\API\GuardianAPI;
+use ChlodAlejandro\ElectionGuard\API\GuardianGenerationInfo;
 use ChlodAlejandro\ElectionGuard\API\MediatorAPI;
+use ChlodAlejandro\ElectionGuard\Error\UnexpectedResponseException;
 use ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian;
-use ChlodAlejandro\ElectionGuard\Schema\Guardian\GuardianGenerationInfo;
 use PHPUnit\Framework\TestCase;
 
 final class EndToEndElectionTest extends TestCase {
@@ -42,35 +43,127 @@ final class EndToEndElectionTest extends TestCase {
      * @test
      * @return void
      * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException
      */
     public function test(): void {
-        // Validate the description
-        $validation = $this->mediatorAPI->validateDescription($this->manifest);
-        self::assertTrue($validation);
+        try {
+            // Validate the description
+            $validation = $this->mediatorAPI->validateDescription($this->manifest);
+            self::assertTrue($validation);
 
-        // Generate guardians
-        $guardianCount = 5;
-        $quorum = 3;
-        $ggi = new GuardianGenerationInfo("test-election", $guardianCount, $quorum);
+            // Generate guardians
+            $guardianCount = 5;
+            $quorum = 3;
+            $ggi = new GuardianGenerationInfo("test-election", $guardianCount, $quorum);
 
-        $guardians = [];
-        for ($i = 0; $i < $guardianCount; $i++) {
-            $guardian = $this->guardianAPI->createGuardian($ggi);
+            /** @var \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian[] $guardians */
+            $guardians = [];
+            for ($i = 0; $i < $guardianCount; $i++) {
+                $guardian = $this->guardianAPI->createGuardian($ggi);
 
-            self::assertIsString($guardian->getPublicKey());
-            self::assertIsString($guardian->getSecretKey());
-            self::assertInstanceOf(stdClass::class, $guardian->getPolynomial());
-            self::assertInstanceOf(stdClass::class, $guardian->getProof());
+                self::assertIsString($guardian->getAuxiliaryKeyPair()->getPublicKey());
+                self::assertIsString($guardian->getAuxiliaryKeyPair()->getSecretKey());
+                self::assertIsString($guardian->getElectionKeyPair()->getPublicKey());
+                self::assertIsString($guardian->getElectionKeyPair()->getSecretKey());
+                self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getPolynomial());
+                self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getProof());
+                $guardian->validate();
 
-            $guardians[] = $guardian;
+                $guardians[] = $guardian;
+            }
+
+            // Combine to make public election key
+            $electionKey = $this->mediatorAPI->combineElectionKeys(array_map(function (Guardian $guardian) {
+                return $guardian->getElectionKeyPair()->getPublicKey();
+            }, $guardians));
+
+            self::assertIsString($electionKey);
+
+            // Generate election context
+            $context = $this->mediatorAPI->getElectionContext($this->manifest, $ggi, $electionKey);
+            self::assertIsString($context->getCryptoBaseHash());
+            self::assertIsString($context->getCryptoExtendedBaseHash());
+            self::assertIsString($context->getDescriptionHash());
+            self::assertIsString($context->getElgamalPublicKey());
+            self::assertIsInt($context->getGuardianCount());
+            self::assertIsInt($context->getQuorum());
+            $context->validate();
+
+            // Encrypt ballots
+            $fakeBallots = TestDataHandler::getFakeBallots($this->manifest, 10);
+            $encryptedBallots = [];
+            for ($i = 0; $i < count($fakeBallots); $i += $i + 1) {
+                $chunkEncryptedBallots = $this->mediatorAPI->encryptBallots(
+                    $this->manifest, $context, array_slice($fakeBallots, (int)$i, (int)($i + 1))
+                );
+                self::assertIsArray($chunkEncryptedBallots);
+                foreach ($chunkEncryptedBallots as $chunkEncryptedBallot)
+                    self::assertInstanceOf(stdClass::class, $chunkEncryptedBallot);
+                $encryptedBallots = array_merge($encryptedBallots, $chunkEncryptedBallots);
+            }
+            self::assertSameSize($fakeBallots, $encryptedBallots);
+            foreach ($encryptedBallots as $encryptedBallot)
+                self::assertInstanceOf(stdClass::class, $encryptedBallot);
+
+            // Cast and spoil ballots
+            $castedBallots = [];
+            $spoiledBallots = [];
+
+            foreach ($encryptedBallots as $i => $encryptedBallot) {
+                $willCast = $i % 2 === 0;
+                if ($willCast) {
+                    $castedBallot = $this->mediatorAPI->castBallot($this->manifest, $context, $encryptedBallot);
+                    self::assertEquals($encryptedBallot->object_id, $castedBallot->object_id);
+                    self::assertEquals("CAST", $castedBallot->state);
+                    self::assertInstanceOf(stdClass::class, $encryptedBallot);
+                    $castedBallots[] = $castedBallot;
+                } else {
+                    $spoiledBallot = $this->mediatorAPI->spoilBallot($this->manifest, $context, $encryptedBallot);
+                    self::assertEquals($encryptedBallot->object_id, $spoiledBallot->object_id);
+                    self::assertEquals("SPOILED", $spoiledBallot->state);
+                    self::assertInstanceOf(stdClass::class, $spoiledBallot);
+                    $spoiledBallots[] = $spoiledBallot;
+                }
+            }
+
+            self::assertCount(count($fakeBallots) / 2, $castedBallots);
+            self::assertCount(count($fakeBallots) - count($castedBallots), $castedBallots);
+
+            // Start the tally and append to the tally.
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, $castedBallots);
+            self::assertInstanceOf(stdClass::class, $tally);
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, $castedBallots, $tally);
+            self::assertInstanceOf(stdClass::class, $tally);
+
+            // Decrypt the tally shares
+            $decryptedTallyShares = [];
+            foreach ($guardians as $guardian) {
+                $decryptedShare =
+                    $this->guardianAPI->decryptTallyShare($this->manifest, $context, $guardian, $tally);
+                self::assertInstanceOf(stdClass::class, $decryptedShare);
+                $decryptedTallyShares[$guardian->generateObjectId()] = $decryptedShare;
+            }
+
+            // Decrypt the tally
+            $decryptedTally = $this->mediatorAPI->decryptTally(
+                $this->manifest,
+                $context,
+                $tally,
+                $decryptedTallyShares
+            );
+            self::assertInstanceOf(stdClass::class, $decryptedTally);
+            self::assertNotNull($decryptedTally->contests);
+
+            foreach ($decryptedTally->contests as $contestId => $contest) {
+                echo $contestId . PHP_EOL;
+                foreach ($contest->selections as $selectionId => $selection) {
+                    echo " $selectionId: " . $selection->tally . PHP_EOL;
+                }
+            }
+        } catch (UnexpectedResponseException $e) {
+            var_dump($e->response->getBody()->getContents());
+            throw $e;
         }
-
-        // Combine to make public election key
-        $electionKey = $this->mediatorAPI->combineElectionKeys(array_map(function (Guardian $guardian) {
-            return $guardian->getPublicKey();
-        }, $guardians));
-
-        self::assertIsString($electionKey);
     }
 
 }
