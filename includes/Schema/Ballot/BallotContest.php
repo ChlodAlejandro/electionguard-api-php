@@ -4,6 +4,7 @@ namespace ChlodAlejandro\ElectionGuard\Schema\Ballot;
 
 use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\SerializableUtils;
 
 class BallotContest implements ISerializable {
@@ -59,7 +60,11 @@ class BallotContest implements ISerializable {
         return $this;
     }
 
-    public function __construct($contest = null, $selections = null) {
+    /**
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest|null $contest
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotSelection[]|null $selections
+     */
+    public function __construct(Contest $contest = null, array $selections = null) {
         $this->contest = $contest;
         $this->selections = $selections;
     }

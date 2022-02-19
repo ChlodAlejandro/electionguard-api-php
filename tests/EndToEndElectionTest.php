@@ -89,8 +89,33 @@ final class EndToEndElectionTest extends TestCase {
             self::assertIsInt($context->getQuorum());
             $context->validate();
 
-            // Encrypt ballots
+            // Generate fake ballots
             $fakeBallots = TestDataHandler::getFakeBallots($this->manifest, 10);
+            $contestVotes = [];
+            foreach ($fakeBallots as $fakeBallot) {
+                foreach ($fakeBallot->getContests() as $contest) {
+                    $contestId = $contest->getContest()->generateObjectId();
+                    if (!isset($contestVotes[$contestId])) {
+                        $contestVotes[$contestId] = [];
+                    }
+                    foreach ($contest->getSelections() as $selection) {
+                        $selectionId = $selection->selection->generateObjectId();
+                        if (!isset($contestVotes[$contestId][$selectionId])) {
+                            $contestVotes[$contestId][$selectionId] = 0;
+                        }
+                        if ($selection->vote === "True")
+                            $contestVotes[$contestId][$selectionId]++;
+                    }
+                }
+            }
+            foreach ($contestVotes as $contestId => $selections) {
+                echo $contestId . PHP_EOL;
+                foreach ($selections as $selectionId => $expectedVotes) {
+                    echo " $selectionId: " . $expectedVotes . PHP_EOL;
+                }
+            }
+
+            // Encrypt ballots
             $encryptedBallots = [];
             for ($i = 0; $i < count($fakeBallots); $i += $i + 1) {
                 $chunkEncryptedBallots = $this->mediatorAPI->encryptBallots(
@@ -127,12 +152,12 @@ final class EndToEndElectionTest extends TestCase {
             }
 
             self::assertCount(count($fakeBallots) / 2, $castedBallots);
-            self::assertCount(count($fakeBallots) - count($castedBallots), $castedBallots);
+            self::assertCount(count($fakeBallots) - count($castedBallots), $spoiledBallots);
 
             // Start the tally and append to the tally.
-            $tally = $this->mediatorAPI->tally($this->manifest, $context, $castedBallots);
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 0, 1));
             self::assertInstanceOf(stdClass::class, $tally);
-            $tally = $this->mediatorAPI->tally($this->manifest, $context, $castedBallots, $tally);
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 1), $tally);
             self::assertInstanceOf(stdClass::class, $tally);
 
             // Decrypt the tally shares
@@ -158,6 +183,10 @@ final class EndToEndElectionTest extends TestCase {
                 echo $contestId . PHP_EOL;
                 foreach ($contest->selections as $selectionId => $selection) {
                     echo " $selectionId: " . $selection->tally . PHP_EOL;
+                    self::assertEquals(
+                        ceil($contestVotes[$contestId][$selectionId] / 2.0),
+                        $selection->tally
+                    );
                 }
             }
         } catch (UnexpectedResponseException $e) {

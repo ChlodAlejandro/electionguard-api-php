@@ -19,6 +19,12 @@ class Ballot implements ISerializable {
     /** @var \ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest[] */
     private $contests;
 
+    /**
+     * @param string $objectId
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle|null $ballotStyle
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest[] $contests
+     */
     public function __construct(
         string $objectId,
         Manifest $manifest,
@@ -103,6 +109,34 @@ class Ballot implements ISerializable {
         }
 
         return true;
+    }
+
+    /**
+     * @return string
+     */
+    public function getObjectId(): string {
+        return $this->objectId;
+    }
+
+    /**
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest
+     */
+    public function getManifest(): Manifest {
+        return $this->manifest;
+    }
+
+    /**
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle
+     */
+    public function getBallotStyle(): ?BallotStyle {
+        return $this->ballotStyle;
+    }
+
+    /**
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest[]
+     */
+    public function getContests(): ?array {
+        return $this->contests;
     }
 
 }

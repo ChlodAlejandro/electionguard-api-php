@@ -152,31 +152,32 @@ class TestDataHandler {
     /**
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle $ballotStyle
-     * @return \ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot[]
      */
-    public static function getFakeBallot(Manifest $manifest, BallotStyle $ballotStyle): Ballot {
-        $ballot = new Ballot(
-            "ballot-" . sha1($ballotStyle->generateObjectId()),
-            $manifest,
-            $ballotStyle
-        );
+    public static function getBallotStyleFakeBallots(Manifest $manifest, BallotStyle $ballotStyle): array {
+        $ballots = [];
 
         foreach ($manifest->getBallotStyleContests($ballotStyle) as $contest) {
             $selections = $contest->getBallotSelections();
-            $ballotSelections = [
-                new BallotSelection(
-                    $selections[rand(0, count($selections) - 1)],
-                    "True"
-                )
-            ];
 
-            $ballot->addContest(new BallotContest(
-                $contest,
-                $ballotSelections
-            ));
+            foreach ($selections as $selection) {
+                $ballots[] = new Ballot(
+                    hrtime(true),
+                    $manifest,
+                    $ballotStyle,
+                    [
+                        new BallotContest($contest, [
+                            new BallotSelection(
+                                $selection,
+                                "True"
+                            )
+                        ])
+                    ]
+                );
+            }
         }
 
-        return $ballot;
+        return $ballots;
     }
 
     /**
@@ -188,7 +189,7 @@ class TestDataHandler {
         $ballots = [];
         foreach ($manifest->getBallotStyles() as $ballotStyle) {
             for ($i = 0; $i < $perStyle; $i++) {
-                $ballots[] = self::getFakeBallot($manifest, $ballotStyle);
+                $ballots = array_merge($ballots, self::getBallotStyleFakeBallots($manifest, $ballotStyle));
             }
         }
         return $ballots;
