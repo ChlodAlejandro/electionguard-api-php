@@ -2,9 +2,12 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use ChlodAlejandro\ElectionGuard\ElectionRecord;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotSelection;
+use ChlodAlejandro\ElectionGuard\Schema\ElectionContext;
+use ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\Candidate;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\ContactInformation;
@@ -193,6 +196,36 @@ class TestDataHandler {
             }
         }
         return $ballots;
+    }
+
+    /**
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
+     * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $context
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian[] $guardians
+     * @param \stdClass[] $castedBallots
+     * @param \stdClass[] $decryptedSpoiledBallots
+     * @param \stdClass $encryptedTally
+     * @param \stdClass $tally
+     * @param \stdClass $constants
+     * @param \stdClass|null $coefficients
+     * @return void
+     */
+    public static function saveElectionRecord(
+        Manifest        $manifest,
+        ElectionContext $context,
+        array           $guardians,
+        array           $castedBallots,
+        array           $decryptedSpoiledBallots,
+        stdClass        $encryptedTally,
+        stdClass        $tally,
+        stdClass        $constants,
+        ?stdClass       $coefficients = null
+    ) {
+        ElectionRecord::save(
+            __DIR__ . DIRECTORY_SEPARATOR . "work",
+            $manifest, $context, $guardians, $castedBallots, $decryptedSpoiledBallots,
+            $encryptedTally, $tally, $constants, $coefficients
+        );
     }
 
 }

@@ -16,14 +16,14 @@ class MediatorAPI extends ElectionGuardAPI {
 
     /**
      * Return the constants defined for an election.
-     * @return array
+     * @return \stdClass
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function getElectionConstants(): array {
+    public function getElectionConstants(): stdClass {
         return $this->execute("election/constants", function($url) {
             $response = $this->client->get($url);
 
-            return json_decode($response->getBody(), true);
+            return json_decode($response->getBody());
         });
     }
 
@@ -238,6 +238,38 @@ class MediatorAPI extends ElectionGuardAPI {
     }
 
     /**
+     * Decrypt ballots from Guardian tally shares.
+     * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $context
+     * @param \stdClass[] $encryptedBallots
+     * @param \stdClass[] $decryptedBallotShares
+     * @return stdClass
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function decryptBallots(
+        ElectionContext $context,
+        // TODO: Precise type
+        array $encryptedBallots,
+        // TODO: Precise type
+        array $decryptedBallotShares
+        // TODO: Precise type
+    ): stdClass {
+        return $this->execute(
+            "ballot/decrypt",
+            function($url) use ($context, $encryptedBallots, $decryptedBallotShares) {
+                $response = $this->client->post($url, [
+                    "json" => array_filter([
+                        "context" => $context->serialize(),
+                        "encrypted_ballots" => $encryptedBallots,
+                        "shares" => $decryptedBallotShares
+                    ])
+                ]);
+
+                return json_decode($response->getBody());
+            }
+        );
+    }
+
+    /**
      * Decrypt a tally from Guardian tally shares.
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
      * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $context
@@ -253,7 +285,7 @@ class MediatorAPI extends ElectionGuardAPI {
         stdClass $tally,
         // TODO: Precise type
         array $decryptedTallyShares
-    // TODO: Precise type
+        // TODO: Precise type
     ): stdClass {
         return $this->execute(
             "tally/decrypt",

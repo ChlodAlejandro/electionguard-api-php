@@ -47,6 +47,8 @@ final class EndToEndElectionTest extends TestCase {
      */
     public function test(): void {
         try {
+            $constants = $this->mediatorAPI->getElectionConstants();
+
             // Validate the description
             $validation = $this->mediatorAPI->validateDescription($this->manifest);
             self::assertTrue($validation);
@@ -179,6 +181,24 @@ final class EndToEndElectionTest extends TestCase {
             self::assertInstanceOf(stdClass::class, $decryptedTally);
             self::assertNotNull($decryptedTally->contests);
 
+            // Decrypt spoiled ballots
+            $decryptedBallotShares = [];
+            foreach ($guardians as $guardian) {
+                $decryptedBallotShare =
+                    $this->guardianAPI->decryptBallots($context, $guardian, $spoiledBallots);
+                self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
+                self::assertIsArray($decryptedBallotShare->shares);
+                $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
+            }
+            $decryptedSpoiledBallots = $this->mediatorAPI->decryptBallots(
+                $context, $spoiledBallots, $decryptedBallotShares
+            );
+            foreach ($spoiledBallots as $spoiledBallot) {
+                $ballotId = $spoiledBallot->object_id;
+                $spoiledBallot->contests = $decryptedSpoiledBallots->$ballotId;
+            }
+
+            // Output tally results
             foreach ($decryptedTally->contests as $contestId => $contest) {
                 echo $contestId . PHP_EOL;
                 foreach ($contest->selections as $selectionId => $selection) {
@@ -189,6 +209,12 @@ final class EndToEndElectionTest extends TestCase {
                     );
                 }
             }
+
+            // Save the election record
+            TestDataHandler::saveElectionRecord(
+                $this->manifest, $context, $guardians,
+                $castedBallots, $spoiledBallots, $tally, $decryptedTally, $constants
+            );
         } catch (UnexpectedResponseException $e) {
             var_dump($e->response->getBody()->getContents());
             throw $e;

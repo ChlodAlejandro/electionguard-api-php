@@ -48,6 +48,37 @@ class GuardianAPI extends ElectionGuardAPI {
     }
 
     /**
+     * Decrypt a single guardian's share of a ballot.
+     * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $electionContext
+     * @param \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian $guardian
+     * @param \stdClass[] $encryptedBallots
+     * @return \stdClass The decrypted tally share.
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function decryptBallots(
+        ElectionContext        $electionContext,
+        Guardian               $guardian,
+        // TODO: Precise types
+        array                  $encryptedBallots
+        // TODO: Precise types
+    ): stdClass {
+        return $this->execute(
+            "ballot/decrypt-shares",
+            function($url) use ($electionContext, $guardian, $encryptedBallots) {
+                $response = $this->client->post($url, [
+                    "json" => [
+                        "context" => $electionContext->serialize(),
+                        "guardian" => $guardian->serialize(),
+                        "encrypted_ballots" => $encryptedBallots
+                    ]
+                ]);
+
+                return json_decode($response->getBody());
+            }
+        );
+    }
+
+    /**
      * Decrypt a single guardian's share of a tally.
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
      * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $electionContext
