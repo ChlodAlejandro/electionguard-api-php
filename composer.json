@@ -7,10 +7,7 @@
     "autoload": {
         "psr-4": {
             "ChlodAlejandro\\ElectionGuard\\": "includes/"
-        },
-        "classmap": [
-            "includes/"
-        ]
+        }
     },
     "authors": [
         {
@@ -18,7 +15,7 @@
             "email": "chlod@chlod.net"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "require": {
         "guzzlehttp/guzzle": "^7.4",
         "ext-json": "*"
