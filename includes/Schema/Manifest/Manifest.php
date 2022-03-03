@@ -325,7 +325,7 @@ class Manifest implements ISerializable {
         }
         foreach (($this->candidates ?? []) as $candidate) {
             $candidate->validate();
-            if (!in_array($candidate->party->generateObjectId(), $partyIDs))
+            if ($candidate->party !== null && !in_array($candidate->party->generateObjectId(), $partyIDs))
                 throw new InvalidDefinitionException("Party ID referenced in candidate not found.");
         }
         foreach (($this->contests ?? []) as $contest) {
