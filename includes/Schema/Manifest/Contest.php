@@ -239,7 +239,8 @@ class Contest implements ISerializable {
             $selection->validate();
         }
         $this->ballotTitle->validate();
-        $this->ballotSubtitle->validate();
+        if (isset($this->ballotSubtitle))
+            $this->ballotSubtitle->validate();
 
         return true;
     }
