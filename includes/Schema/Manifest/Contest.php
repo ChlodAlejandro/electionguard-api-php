@@ -222,8 +222,6 @@ class Contest implements ISerializable {
             throw new InvalidDefinitionException("Contest selections is null.");
         if (!isset($this->ballotTitle))
             throw new InvalidDefinitionException("Contest title is null.");
-        if (!isset($this->ballotSubtitle))
-            throw new InvalidDefinitionException("Contest subtitle is null.");
 
         if (strlen($this->generateObjectId()) > 256)
             throw new InvalidDefinitionException("Contest ID is longer than 256 bytes.");
