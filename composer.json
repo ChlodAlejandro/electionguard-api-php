@@ -7,7 +7,10 @@
     "autoload": {
         "psr-4": {
             "ChlodAlejandro\\ElectionGuard\\": "includes/"
-        }
+        },
+        "classmap": [
+            "includes/"
+        ]
     },
     "authors": [
         {
