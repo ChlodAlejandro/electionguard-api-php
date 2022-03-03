@@ -70,4 +70,31 @@ class TextContainer implements ISerializable {
         return true;
     }
 
+    /**
+     * @param string|string[] $language
+     * @return string
+     */
+    public function get($language): string {
+        if (!is_array($language))
+            $language = [$language];
+
+        foreach ($language as $lang) {
+            $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
+                return strtolower($text->language) === strtolower($lang);
+            })[0];
+            if (!empty($foundText))
+                return $foundText->value;
+        }
+        foreach ($language as $lang) {
+            $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
+                return strtolower($text->language) === strtolower(
+                    preg_replace('/[-_].*/', '', $lang)
+                    );
+            })[0];
+            if (!empty($foundText))
+                return $foundText->value;
+        }
+        return $language[0]->value;
+    }
+
 }
