@@ -48,7 +48,7 @@ class Candidate implements ISerializable {
         return $this->imageUri;
     }
 
-    public function setImageUri(string $imageUri): Candidate {
+    public function setImageUri(?string $imageUri): Candidate {
         $this->imageUri = $imageUri;
 
         return $this;
