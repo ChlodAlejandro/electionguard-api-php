@@ -38,7 +38,7 @@ class Candidate implements ISerializable {
         return $this->party;
     }
 
-    public function setParty(Party $party): Candidate {
+    public function setParty(?Party $party): Candidate {
         $this->party = $party;
 
         return $this;
