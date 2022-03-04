@@ -72,9 +72,9 @@ class TextContainer implements ISerializable {
 
     /**
      * @param string|string[] $language
-     * @return string
+     * @return string|null
      */
-    public function get($language): string {
+    public function get($language): ?string {
         if (!is_array($language))
             $language = [$language];
 
