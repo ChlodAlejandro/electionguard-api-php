@@ -83,20 +83,20 @@ class TextContainer implements ISerializable {
         }
 
         foreach ($language as $lang) {
-            $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
+            $localizedText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
                 return strtolower($text->language) === strtolower($lang);
-            })[0];
-            if (!empty($foundText))
-                return $foundText->value;
+            });
+            if (isset($localizedText[0]) && !empty($foundText))
+                return $localizedText[0]->value;
         }
         foreach ($language as $lang) {
-            $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
+            $localizedText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
                 return strtolower($text->language) === strtolower(
                     preg_replace('/[-_].*/', '', $lang)
                 );
-            })[0];
-            if (!empty($foundText))
-                return $foundText->value;
+            });
+            if (isset($localizedText[0]) && !empty($foundText))
+                return $localizedText[0]->value;
         }
         return isset($this->text[0]) ? $this->text[0]->value : null;
     }
