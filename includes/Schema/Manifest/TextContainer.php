@@ -78,6 +78,10 @@ class TextContainer implements ISerializable {
         if (!is_array($language))
             $language = [$language];
 
+        if ($this->text == null || count($this->text) == 0) {
+            return null;
+        }
+
         foreach ($language as $lang) {
             $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
                 return strtolower($text->language) === strtolower($lang);
@@ -89,7 +93,7 @@ class TextContainer implements ISerializable {
             $foundText = array_filter($this->text, function (LocalizedText $text) use ($lang) {
                 return strtolower($text->language) === strtolower(
                     preg_replace('/[-_].*/', '', $lang)
-                    );
+                );
             })[0];
             if (!empty($foundText))
                 return $foundText->value;
