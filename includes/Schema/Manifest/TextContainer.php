@@ -94,7 +94,7 @@ class TextContainer implements ISerializable {
             if (!empty($foundText))
                 return $foundText->value;
         }
-        return $language[0]->value;
+        return $this->text[0]->value;
     }
 
 }
