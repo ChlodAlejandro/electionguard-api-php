@@ -94,7 +94,7 @@ class TextContainer implements ISerializable {
             if (!empty($foundText))
                 return $foundText->value;
         }
-        return $this->text[0] ? $this->text[0]->value : null;
+        return isset($this->text[0]) ? $this->text[0]->value : null;
     }
 
 }
