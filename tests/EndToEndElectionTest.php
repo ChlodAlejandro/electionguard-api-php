@@ -47,6 +47,9 @@ final class EndToEndElectionTest extends TestCase {
      */
     public function test(): void {
         try {
+            self::assertTrue($this->mediatorAPI->ping());
+            self::assertTrue($this->guardianAPI->ping());
+
             $constants = $this->mediatorAPI->getElectionConstants();
 
             // Validate the description
