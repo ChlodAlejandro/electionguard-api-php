@@ -15,20 +15,6 @@ class MediatorAPI extends ElectionGuardAPI {
     private $seedHash;
 
     /**
-     * Check if the API can be pinged.
-     * @return bool
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     */
-    public function ping(): bool {
-        return $this->execute("ping", function($url) {
-            $response = $this->client->get($url);
-            $decodedResponse = json_decode($response->getBody());
-
-            return $decodedResponse === "pong";
-        });
-    }
-
-    /**
      * Return the constants defined for an election.
      * @return \stdClass
      * @throws \GuzzleHttp\Exception\GuzzleException

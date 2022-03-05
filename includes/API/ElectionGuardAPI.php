@@ -25,19 +25,21 @@ class ElectionGuardAPI {
      * Creates a Mediator endpoint instance.
      * @param string[]|string $endpoints
      */
-    public function __construct($endpoints) {
+    public function __construct($endpoints, array $clientOptions = []) {
         if (is_array($endpoints))
             $this->endpoints = $endpoints;
         else
             $this->endpoints = [$endpoints];
 
-        $this->client = new Client([
-            "defaults" => [
-                "headers" => [
-                    "User-Agent" => "ElectionGuardPHP/1.0"
+        $this->client = new Client(array_merge_recursive(
+            [
+                "defaults" => [
+                    "headers" => [
+                        "User-Agent" => "ElectionGuardPHP/1.0"
+                    ]
                 ]
-            ]
-        ]);
+            ], $clientOptions
+        ));
     }
 
     /**
@@ -78,6 +80,24 @@ class ElectionGuardAPI {
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Check if the API can be pinged.
+     * @param int $timeout The time to wait for the response.
+     * @return bool
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function ping(int $timeout = 1): bool {
+        return $this->execute("ping", function($url) use ($timeout) {
+            $response = $this->client->get($url, [
+                'timeout' => $timeout,
+                'connect_timeout' => $timeout,
+            ]);
+            $decodedResponse = json_decode($response->getBody());
+
+            return $decodedResponse === "pong";
+        });
     }
 
 }

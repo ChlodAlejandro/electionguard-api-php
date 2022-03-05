@@ -11,20 +11,6 @@ use stdClass;
 class GuardianAPI extends ElectionGuardAPI {
 
     /**
-     * Check if the API can be pinged.
-     * @return bool
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     */
-    public function ping(): bool {
-        return $this->execute("ping", function($url) {
-            $response = $this->client->get($url);
-            $decodedResponse = json_decode($response->getBody());
-
-            return $decodedResponse === "pong";
-        });
-    }
-
-    /**
      * Creates a guardian.
      * @param \ChlodAlejandro\ElectionGuard\API\GuardianGenerationInfo $ggi Guardian generation information.
      * @return \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian The guardian.
