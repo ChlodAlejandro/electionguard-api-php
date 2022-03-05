@@ -2,26 +2,19 @@
 
 namespace ChlodAlejandro\ElectionGuard\API;
 
-use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
 use ChlodAlejandro\ElectionGuard\Utilities;
 
-class GuardianGenerationInfo implements ISerializable {
+class GuardianGenerationInfo extends GuardianSetInfo implements ISerializable {
 
     /** @var string Guardian ID template. */
     private $id;
-    /** @var int Number of guardians to be generated. */
-    private $guardianCount;
-    /** @var int Number of guardians required to successfully perform a tally decryption. */
-    private $quorum;
     /** @var int Current guardian generation sequence number. */
     private $sequenceOrder;
 
     public function __construct(string $id, int $guardianCount, ?int $quorum = null, int $sequenceOrder = 0) {
+        parent::__construct($guardianCount, $quorum);
         $this->id = $id;
-        $this->guardianCount = $guardianCount;
-        $this->quorum = $quorum ?? $guardianCount;
-
         $this->sequenceOrder = $sequenceOrder ?? 0;
     }
 
@@ -31,14 +24,6 @@ class GuardianGenerationInfo implements ISerializable {
 
     public function getId(): string {
         return $this->id;
-    }
-
-    public function getGuardianCount(): int {
-        return $this->guardianCount;
-    }
-
-    public function getQuorum(): int {
-        return $this->quorum;
     }
 
     public function getSequenceOrder(): int {

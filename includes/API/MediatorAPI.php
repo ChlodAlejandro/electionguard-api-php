@@ -3,11 +3,9 @@
 namespace ChlodAlejandro\ElectionGuard\API;
 
 use ChlodAlejandro\ElectionGuard\Error\InvalidManifestException;
-use ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot;
 use ChlodAlejandro\ElectionGuard\Schema\ElectionContext;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\SerializableUtils;
-use phpDocumentor\Reflection\Types\Integer;
 use stdClass;
 
 class MediatorAPI extends ElectionGuardAPI {
@@ -72,23 +70,23 @@ class MediatorAPI extends ElectionGuardAPI {
     /**
      * Constructs an election context from the guardian generation info and the election manifest.
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest Election manifest.
-     * @param \ChlodAlejandro\ElectionGuard\API\GuardianGenerationInfo $ggi Guardian generation information.
+     * @param \ChlodAlejandro\ElectionGuard\API\GuardianSetInfo $gsi Guardian set information.
      * @param string $jointKey The joint public key.
      * @return \ChlodAlejandro\ElectionGuard\Schema\ElectionContext The election context.
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function getElectionContext(
-        Manifest $manifest,
-        GuardianGenerationInfo $ggi,
-        string $jointKey
+        Manifest        $manifest,
+        GuardianSetInfo $gsi,
+        string          $jointKey
     ): ElectionContext {
-        return $this->execute("election/context", function($url) use ($manifest, $ggi, $jointKey) {
+        return $this->execute("election/context", function($url) use ($manifest, $gsi, $jointKey) {
             $response = $this->client->post($url, [
                 "json" => [
                     "description" => $manifest->serialize(),
                     "elgamal_public_key" => $jointKey,
-                    "number_of_guardians" => $ggi->getGuardianCount(),
-                    "quorum" => $ggi->getQuorum()
+                    "number_of_guardians" => $gsi->getGuardianCount(),
+                    "quorum" => $gsi->getQuorum()
                 ]
             ]);
             $decodedResponse = json_decode($response->getBody());
