@@ -20,7 +20,7 @@ class Candidate implements ISerializable {
     public $party;
     /**
      * A URI to the candidate's image.
-     * @var string
+     * @var ?string
      */
     public $imageUri;
 
@@ -44,7 +44,7 @@ class Candidate implements ISerializable {
         return $this;
     }
 
-    public function getImageUri(): string {
+    public function getImageUri(): ?string {
         return $this->imageUri;
     }
 
