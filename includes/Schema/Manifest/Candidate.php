@@ -15,7 +15,7 @@ class Candidate implements ISerializable {
     public $name;
     /**
      * The party of the candidate.
-     * @var Party
+     * @var ?Party
      */
     public $party;
     /**
@@ -34,7 +34,7 @@ class Candidate implements ISerializable {
         return $this;
     }
 
-    public function getParty(): Party {
+    public function getParty(): ?Party {
         return $this->party;
     }
 
