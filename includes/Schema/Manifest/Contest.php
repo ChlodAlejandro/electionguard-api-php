@@ -64,7 +64,7 @@ class Contest implements ISerializable {
     public $ballotTitle;
     /**
      * Subtitle for the contest.
-     * @var TextContainer
+     * @var ?TextContainer
      */
     public $ballotSubtitle;
 
@@ -174,11 +174,11 @@ class Contest implements ISerializable {
         return $this;
     }
 
-    public function getBallotSubtitle(): TextContainer {
+    public function getBallotSubtitle(): ?TextContainer {
         return $this->ballotSubtitle;
     }
 
-    public function setBallotSubtitle(TextContainer $ballotSubtitle): Contest {
+    public function setBallotSubtitle(?TextContainer $ballotSubtitle): Contest {
         $this->ballotSubtitle = $ballotSubtitle;
 
         return $this;
