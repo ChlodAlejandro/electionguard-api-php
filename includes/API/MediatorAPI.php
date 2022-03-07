@@ -310,8 +310,8 @@ class MediatorAPI extends ElectionGuardAPI {
      * @return string
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function getTrackWords(string $trackerHash, string $separator = "-"): string {
-        return $this->execute("election/constants", function($url) use ($trackerHash, $separator) {
+    public function getTrackerWords(string $trackerHash, string $separator = "-"): string {
+        return $this->execute("tracker/words", function($url) use ($trackerHash, $separator) {
             $response = $this->client->post($url, [
                 RequestOptions::JSON => [
                     "tracker_hash" => $trackerHash,
