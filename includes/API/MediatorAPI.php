@@ -6,6 +6,7 @@ use ChlodAlejandro\ElectionGuard\Error\InvalidManifestException;
 use ChlodAlejandro\ElectionGuard\Schema\ElectionContext;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\SerializableUtils;
+use GuzzleHttp\RequestOptions;
 use stdClass;
 
 class MediatorAPI extends ElectionGuardAPI {
@@ -300,6 +301,26 @@ class MediatorAPI extends ElectionGuardAPI {
                 return json_decode($response->getBody());
             }
         );
+    }
+
+    /**
+     * Convert tracker from hash to human readable / friendly words
+     * @param string $trackerHash The tracker hash
+     * @param string $separator The separator to use between words
+     * @return string
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function getTrackWords(string $trackerHash, string $separator = "-"): string {
+        return $this->execute("election/constants", function($url) use ($trackerHash, $separator) {
+            $response = $this->client->post($url, [
+                RequestOptions::JSON => [
+                    "tracker_hash" => $trackerHash,
+                    "separator" => $separator
+                ]
+            ]);
+
+            return json_decode($response->getBody())->tracker_words;
+        });
     }
 
 }
