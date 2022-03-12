@@ -1,0 +1,42 @@
+name: CI/CD
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    audit:
+        name: CI/CD
+        runs-on: ubuntu-latest
+
+        services:
+            electionguard-mediator:
+                image: electionguard/electionguard-web-api
+                env:
+                    API_MODE: mediator
+                ports:
+                    - "8000:8000"
+            electionguard-guardian:
+                image: electionguard/electionguard-web-api
+                env:
+                    API_MODE: guardian
+                ports:
+                    - "8001:8000"
+        steps:
+            -   name: Checkout code
+                uses: actions/checkout@v2
+
+            -   name: Setup PHP
+                uses: php-actions/composer@v6
+                with:
+                    php-version: 7.3
+                    progress: yes
+
+            -   name: Install dependencies
+                run: composer install
+
+            -   name: Perform tests
+                run: npm test
+                env:
+                    ELECTIONGUARD_MEDIATOR_HOST: http://electionguard-mediator:8000
+                    ELECTIONGUARD_GUARDIAN_HOST: http://electionguard-guardian:8001
