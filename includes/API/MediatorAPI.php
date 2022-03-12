@@ -11,7 +11,7 @@ use stdClass;
 
 class MediatorAPI extends ElectionGuardAPI {
 
-    private $seedHash;
+    public $seedHash;
 
     /**
      * Return the constants defined for an election.

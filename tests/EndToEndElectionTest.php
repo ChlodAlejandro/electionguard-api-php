@@ -159,6 +159,11 @@ final class EndToEndElectionTest extends TestCase {
             self::assertCount(count($fakeBallots) / 2, $castedBallots);
             self::assertCount(count($fakeBallots) - count($castedBallots), $spoiledBallots);
 
+            // Determine tracker words for all ballots
+            foreach (array_merge($castedBallots, $spoiledBallots) as $ballot) {
+                self::assertIsString($this->mediatorAPI->getTrackerWords($ballot->tracking_hash));
+            }
+
             // Start the tally and append to the tally.
             $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 0, 1));
             self::assertInstanceOf(stdClass::class, $tally);
@@ -219,7 +224,10 @@ final class EndToEndElectionTest extends TestCase {
                 $castedBallots, $spoiledBallots, $tally, $decryptedTally, $constants
             );
         } catch (UnexpectedResponseException $e) {
-            var_dump($e->response->getBody()->getContents());
+            if ($e->response)
+                var_dump($e->response->getBody()->getContents());
+            if ($e->request)
+                var_dump($e->request);
             throw $e;
         }
     }
