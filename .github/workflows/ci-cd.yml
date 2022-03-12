@@ -29,11 +29,8 @@ jobs:
             -   name: Setup PHP
                 uses: php-actions/composer@v6
                 with:
-                    php-version: 7.3
+                    php_version: 7.3
                     progress: yes
-
-            -   name: Install dependencies
-                run: composer install
 
             -   name: Perform tests
                 run: npm test
