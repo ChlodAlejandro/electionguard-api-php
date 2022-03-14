@@ -19,6 +19,23 @@ class ElectionKeyPair implements ISerializable {
     /** @var stdClass See https://www.electionguard.vote/overview/Glossary/#election-polynomial. */
     private $polynomial;
 
+    /**
+     * @param string|\stdClass|array $json
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Guardian\ElectionKeyPair
+     */
+    public static function fromJson($json): ElectionKeyPair {
+        $data = is_string($json)
+            ? json_decode($json, true)
+            : ($json instanceof stdClass ? $json : json_decode(json_encode($json), false));
+
+        return new ElectionKeyPair(
+            $data->proof,
+            $data->polynomial,
+            $data->public_key,
+            $data->secret_key ?? null,
+        );
+    }
+
     public function __construct($proof, $polynomial, $publicKey, $secretKey = null) {
         $this->publicKey = $publicKey;
         $this->proof = $proof;

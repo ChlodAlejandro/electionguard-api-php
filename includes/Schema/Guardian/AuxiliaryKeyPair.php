@@ -4,6 +4,7 @@ namespace ChlodAlejandro\ElectionGuard\Schema\Guardian;
 
 use ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
+use stdClass;
 
 class AuxiliaryKeyPair implements ISerializable {
 
@@ -11,6 +12,21 @@ class AuxiliaryKeyPair implements ISerializable {
     public $publicKey;
     /** @var string */
     public $secretKey;
+
+    /**
+     * @param string|\stdClass|array $json
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Guardian\AuxiliaryKeyPair
+     */
+    public static function fromJson($json): AuxiliaryKeyPair {
+        $data = is_string($json)
+            ? json_decode($json, true)
+            : ($json instanceof stdClass ? $json : json_decode(json_encode($json), false));
+
+        return new AuxiliaryKeyPair(
+            $data->public_key,
+            $data->secret_key
+        );
+    }
 
     public function __construct($publicKey, $secretKey) {
         $this->publicKey = $publicKey;

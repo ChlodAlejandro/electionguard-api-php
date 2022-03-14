@@ -77,6 +77,16 @@ final class EndToEndElectionTest extends TestCase {
                 $guardians[] = $guardian;
             }
 
+            echo "[i] Test guardian serialization and deserialization" . PHP_EOL;
+            foreach ($guardians as $guardian) {
+                $serializedGuardian = $guardian->serialize();
+                $deserializedGuardian = Guardian::guardianFromJson($serializedGuardian);
+                self::assertJsonStringEqualsJsonString(
+                    json_encode($guardian),
+                    json_encode($deserializedGuardian)
+                );
+            }
+
             echo "[i] Combine to make public election key" . PHP_EOL;
             $electionKey = $this->mediatorAPI->combineElectionKeys(array_map(function (Guardian $guardian) {
                 return $guardian->getElectionKeyPair()->getPublicKey();

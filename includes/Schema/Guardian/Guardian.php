@@ -5,6 +5,7 @@ namespace ChlodAlejandro\ElectionGuard\Schema\Guardian;
 use ChlodAlejandro\ElectionGuard\API\GuardianGenerationInfo;
 use ChlodAlejandro\ElectionGuard\Schema\ISerializable;
 use ChlodAlejandro\ElectionGuard\Utilities;
+use stdClass;
 
 class Guardian extends GuardianGenerationInfo implements ISerializable {
 
@@ -12,6 +13,22 @@ class Guardian extends GuardianGenerationInfo implements ISerializable {
     private $electionKeyPair;
     /** @var \ChlodAlejandro\ElectionGuard\Schema\Guardian\AuxiliaryKeyPair */
     private $auxiliaryKeyPair;
+
+    /**
+     * @param string|\stdClass|array $json
+     * @return \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian
+     */
+    public static function guardianFromJson($json): Guardian {
+        $data = is_string($json)
+            ? json_decode($json, true)
+            : ($json instanceof stdClass ? $json : json_decode(json_encode($json), false));
+
+        return new Guardian(
+            parent::ggiFromJson($json),
+            ElectionKeyPair::fromJson($data->election_key_pair),
+            AuxiliaryKeyPair::fromJson($data->auxiliary_key_pair),
+        );
+    }
 
     public function __construct(
         GuardianGenerationInfo $ggi,
