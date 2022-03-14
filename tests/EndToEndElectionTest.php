@@ -86,7 +86,6 @@ final class EndToEndElectionTest extends TestCase {
                     json_encode($deserializedGuardian)
                 );
             }
-            return;
 
             echo "[i] Combine to make public election key" . PHP_EOL;
             $electionKey = $this->mediatorAPI->combineElectionKeys(array_map(function (Guardian $guardian) {
