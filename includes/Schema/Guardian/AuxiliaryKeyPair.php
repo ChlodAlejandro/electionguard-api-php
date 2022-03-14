@@ -19,7 +19,7 @@ class AuxiliaryKeyPair implements ISerializable {
      */
     public static function fromJson($json): AuxiliaryKeyPair {
         $data = is_string($json)
-            ? json_decode($json, true)
+            ? json_decode($json, false)
             : ($json instanceof stdClass ? $json : json_decode(json_encode($json), false));
 
         return new AuxiliaryKeyPair(
