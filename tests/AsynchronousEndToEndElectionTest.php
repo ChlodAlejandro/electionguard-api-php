@@ -292,7 +292,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
             echo "[i] Save the election record" . PHP_EOL;
             TestDataHandler::saveElectionRecord(
-                $this->manifest, $context, $guardians,
+                get_class($this), $this->manifest, $context, $guardians,
                 $castedBallots, $spoiledBallots, $tally, $decryptedTally, $constants
             );
         } catch (UnexpectedResponseException $e) {
