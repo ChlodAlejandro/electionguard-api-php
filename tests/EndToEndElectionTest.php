@@ -9,11 +9,11 @@ use ChlodAlejandro\ElectionGuard\API\MediatorAPI;
 class EndToEndElectionTest extends AsynchronousEndToEndElectionTest {
 
     public function mediatorAPI(): MediatorAPI {
-        return $this->_mediatorAPI[0];
+        return is_array($this->_mediatorAPI) ? $this->_mediatorAPI[0] : $this->_mediatorAPI;
     }
 
     public function guardianAPI(): GuardianAPI {
-        return $this->_guardianAPI[0];
+        return is_array($this->_guardianAPI) ? $this->_guardianAPI[0] : $this->_guardianAPI;
     }
 
 }
