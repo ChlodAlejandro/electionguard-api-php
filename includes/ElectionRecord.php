@@ -8,6 +8,16 @@ use stdClass;
 
 class ElectionRecord {
 
+    private static function deleteTree($dir, $deleteRoot = true) {
+        $files = array_diff(scandir($dir), array(".", ".."));
+        foreach ($files as $file) {
+            (is_dir("$dir/$file")) ? ElectionRecord::deleteTree("$dir/$file") : unlink("$dir/$file");
+        }
+        if ($deleteRoot) {
+            rmdir($dir);
+        }
+    }
+
     /**
      * @param string $outputFolder
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
@@ -36,16 +46,7 @@ class ElectionRecord {
         if (is_dir($outputFolder) === false) {
             mkdir($outputFolder);
         } else {
-            function deleteTree($dir, $deleteRoot = true) {
-                $files = array_diff(scandir($dir), array(".", ".."));
-                foreach ($files as $file) {
-                    (is_dir("$dir/$file")) ? deleteTree("$dir/$file") : unlink("$dir/$file");
-                }
-                if ($deleteRoot) {
-                    rmdir($dir);
-                }
-            }
-            deleteTree($outputFolder, false);
+            ElectionRecord::deleteTree($outputFolder, false);
         }
 
         file_put_contents(
