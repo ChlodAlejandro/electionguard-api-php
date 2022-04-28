@@ -9,19 +9,41 @@ jobs:
         name: CI/CD
         runs-on: ubuntu-latest
 
+        strategy:
+            matrix:
+                version: ['7.3', '8', '8.1']
+
         services:
-            electionguard-mediator:
+            electionguard-mediator-1:
                 image: electionguard/electionguard-web-api
                 env:
                     API_MODE: mediator
                 ports:
                     - "8000:8000"
+            electionguard-mediator-2:
+                image: electionguard/electionguard-web-api
+                env:
+                    API_MODE: mediator
+                ports:
+                    - "8001:8000"
+            electionguard-mediator-3:
+                image: electionguard/electionguard-web-api
+                env:
+                    API_MODE: mediator
+                ports:
+                    - "8002:8000"
+            electionguard-mediator-4:
+                image: electionguard/electionguard-web-api
+                env:
+                    API_MODE: mediator
+                ports:
+                    - "8003:8000"
             electionguard-guardian:
                 image: electionguard/electionguard-web-api
                 env:
                     API_MODE: guardian
                 ports:
-                    - "8001:8000"
+                    - "9000:8000"
         steps:
             -   name: Checkout code
                 uses: actions/checkout@v2
@@ -29,11 +51,11 @@ jobs:
             -   name: Setup PHP
                 uses: php-actions/composer@v6
                 with:
-                    php_version: 7.3
+                    php_version: ${{ matrix.version }}
                     progress: yes
 
             -   name: Perform tests
-                run: npm test
+                run: composer run-script test
                 env:
-                    ELECTIONGUARD_MEDIATOR_HOST: http://electionguard-mediator:8000
-                    ELECTIONGUARD_GUARDIAN_HOST: http://electionguard-guardian:8001
+                    ELECTIONGUARD_MEDIATOR_HOST: electionguard-mediator-1:8000;electionguard-mediator-1:8001;electionguard-mediator-1:8002;electionguard-mediator-1:8003
+                    ELECTIONGUARD_GUARDIAN_HOST: electionguard-guardian:9000
