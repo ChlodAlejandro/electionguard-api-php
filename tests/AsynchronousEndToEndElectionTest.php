@@ -63,8 +63,6 @@ class AsynchronousEndToEndElectionTest extends TestCase {
      * Performs an end-to-end election.
      * @test
      * @return void
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException
      */
     public function test(): void {
         try {
@@ -276,6 +274,9 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             if ($e->request)
                 var_dump($e->request);
             throw $e;
+        } catch (Throwable $e) {
+            echo "[e] Encountered error!" . PHP_EOL;
+            var_dump($e);
         }
     }
 
