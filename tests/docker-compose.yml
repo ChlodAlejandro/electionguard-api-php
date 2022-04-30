@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+    electionguard_mediator:
+        image: electionguard/electionguard-web-api:latest
+        cpuset: "0"
+        ports:
+            - "42400:8000"
+        environment:
+            API_MODE: "mediator"
+            BACKEND_CORS_ORIGINS: '["http://localhost:8000","http://localhost:42400","http://caster.chlod.local","https://localhost:8000","https://localhost:42400","https://caster.chlod.local"]'
+            PROJECT_NAME: "caster"
+        restart: always
+        stop_grace_period: 1m
+    electionguard_mediator_1:
+        image: electionguard/electionguard-web-api:latest
+        cpuset: "1"
+        ports:
+            - "42401:8000"
+        environment:
+            API_MODE: "mediator"
+            BACKEND_CORS_ORIGINS: '["http://localhost:8000","http://localhost:42400","http://caster.chlod.local","https://localhost:8000","https://localhost:42400","https://caster.chlod.local"]'
+            PROJECT_NAME: "caster"
+        restart: always
+        stop_grace_period: 1m
+    electionguard_mediator_2:
+        image: electionguard/electionguard-web-api:latest
+        cpuset: "2"
+        ports:
+            - "42402:8000"
+        environment:
+            API_MODE: "mediator"
+            BACKEND_CORS_ORIGINS: '["http://localhost:8000","http://localhost:42400","http://caster.chlod.local","https://localhost:8000","https://localhost:42400","https://caster.chlod.local"]'
+            PROJECT_NAME: "caster"
+        restart: always
+        stop_grace_period: 1m
+    electionguard_mediator_3:
+        image: electionguard/electionguard-web-api:latest
+        cpuset: "3"
+        ports:
+            - "42403:8000"
+        environment:
+            API_MODE: "mediator"
+            BACKEND_CORS_ORIGINS: '["http://localhost:8000","http://localhost:42400","http://caster.chlod.local","https://localhost:8000","https://localhost:42400","https://caster.chlod.local"]'
+            PROJECT_NAME: "caster"
+        restart: always
+        stop_grace_period: 1m
+    electionguard_guardian:
+        image: electionguard/electionguard-web-api:latest
+        ports:
+            - "42500:8000"
+        environment:
+            API_MODE: "guardian"
+            BACKEND_CORS_ORIGINS: '["http://localhost:8000","http://localhost:42500","http://caster.chlod.local","https://localhost:8000","https://localhost:42500","https://caster.chlod.local"]'
+            PROJECT_NAME: "caster"
+        restart: always
+        stop_grace_period: 1m

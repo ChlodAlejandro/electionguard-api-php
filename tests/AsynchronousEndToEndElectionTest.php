@@ -19,13 +19,13 @@ class AsynchronousEndToEndElectionTest extends TestCase {
      */
     private $manifest;
     /**
-     * @var \ChlodAlejandro\ElectionGuard\API\MediatorAPI[]
+     * @var \ChlodAlejandro\ElectionGuard\API\MediatorAPI
      */
-    protected $_mediatorAPI;
+    protected $mediatorAPI;
     /**
-     * @var \ChlodAlejandro\ElectionGuard\API\GuardianAPI[]
+     * @var \ChlodAlejandro\ElectionGuard\API\GuardianAPI
      */
-    protected $_guardianAPI;
+    protected $guardianAPI;
 
     /**
      * @throws \ChlodAlejandro\ElectionGuard\Error\InvalidDefinitionException
@@ -35,52 +35,28 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
         $this->manifest = TestDataHandler::getManifest();
         if (getenv("ELECTIONGUARD_MEDIATOR_HOST") != null) {
-            $hosts = explode(";", getenv("ELECTIONGUARD_MEDIATOR_HOST"));
-            if (count($hosts) == 0) {
-                throw new Error("ELECTIONGUARD_MEDIATOR_HOST contains no hosts");
-            } if (count($hosts) == 1) {
-                $this->_mediatorAPI = new MediatorAPI($hosts[0]);
-            } else {
-                $this->_mediatorAPI = array_map(function ($host) {
-                    return new MediatorAPI($host);
-                }, $hosts);
-            }
+            $hosts = array_filter(explode(";", getenv("ELECTIONGUARD_MEDIATOR_HOST")));
+            $this->mediatorAPI = new MediatorAPI(empty($hosts) ? "http://localhost:8001" : $hosts);
         } else {
-            $this->_mediatorAPI = new MediatorAPI("http://localhost:8000");
+            $this->mediatorAPI = new MediatorAPI($hosts ?? "http://localhost:8001");
         }
 
         if (getenv("ELECTIONGUARD_GUARDIAN_HOST") != null) {
-            $hosts = explode(";", getenv("ELECTIONGUARD_GUARDIAN_HOST"));
-            if (count($hosts) == 0) {
-                throw new Error("ELECTIONGUARD_GUARDIAN_HOST contains no hosts");
-            } if (count($hosts) == 1) {
-                $this->_guardianAPI = new GuardianAPI($hosts[0]);
-            } else {
-                $this->_guardianAPI = array_map(function ($host) {
-                    return new GuardianAPI($host);
-                }, $hosts);
-            }
+            $hosts = array_filter(explode(";", getenv("ELECTIONGUARD_GUARDIAN_HOST")));
+            $this->guardianAPI = new GuardianAPI(empty($hosts) ? "http://localhost:8001" : $hosts);
         } else {
-            $this->_guardianAPI = new GuardianAPI("http://localhost:8001");
+            $this->guardianAPI = new GuardianAPI($hosts ?? "http://localhost:8001");
         }
     }
 
     /**
-     * @return \ChlodAlejandro\ElectionGuard\API\MediatorAPI
+     * @test
+     * @return void
      */
-    public function mediatorAPI(): MediatorAPI {
-        return is_array($this->_mediatorAPI)
-            ? $this->_mediatorAPI[rand(0, count($this->_mediatorAPI) - 1)]
-            : $this->_mediatorAPI;
-    }
-
-    /**
-     * @return \ChlodAlejandro\ElectionGuard\API\GuardianAPI
-     */
-    public function guardianAPI(): GuardianAPI {
-        return is_array($this->_guardianAPI)
-            ? $this->_guardianAPI[rand(0, count($this->_guardianAPI) - 1)]
-            : $this->_guardianAPI;
+    public function endpointTests() {
+        $timings = $this->mediatorAPI->getTargetLatencies();
+        $this->assertSameSize($this->mediatorAPI->getTargets(), $timings);
+        var_dump($timings);
     }
 
     /**
@@ -92,12 +68,10 @@ class AsynchronousEndToEndElectionTest extends TestCase {
      */
     public function test(): void {
         try {
-            self::assertTrue($this->mediatorAPI()->ping());
-
-            $constants = $this->mediatorAPI()->getElectionConstants();
+            $constants = $this->mediatorAPI->getElectionConstants();
 
             echo "[i] Validate the description" . PHP_EOL;
-            $validation = $this->mediatorAPI()->validateDescription($this->manifest);
+            $validation = $this->mediatorAPI->validateDescription($this->manifest);
             self::assertTrue($validation);
 
             echo "[i] Generate guardians" . PHP_EOL;
@@ -108,7 +82,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             /** @var \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian[] $guardians */
             $guardians = [];
             for ($i = 0; $i < $guardianCount; $i++) {
-                $guardian = $this->guardianAPI()->createGuardian($ggi);
+                $guardian = $this->guardianAPI->createGuardian($ggi);
 
                 self::assertIsString($guardian->getAuxiliaryKeyPair()->getPublicKey());
                 self::assertIsString($guardian->getAuxiliaryKeyPair()->getSecretKey());
@@ -132,14 +106,14 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             }
 
             echo "[i] Combine to make public election key" . PHP_EOL;
-            $electionKey = $this->mediatorAPI()->combineElectionKeys(array_map(function (Guardian $guardian) {
+            $electionKey = $this->mediatorAPI->combineElectionKeys(array_map(function (Guardian $guardian) {
                 return $guardian->getElectionKeyPair()->getPublicKey();
             }, $guardians));
 
             self::assertIsString($electionKey);
 
             echo "[i] Generate election context" . PHP_EOL;
-            $context = $this->mediatorAPI()->getElectionContext($this->manifest, $ggi, $electionKey);
+            $context = $this->mediatorAPI->getElectionContext($this->manifest, $ggi, $electionKey);
             self::assertIsString($context->getCryptoBaseHash());
             self::assertIsString($context->getCryptoExtendedBaseHash());
             self::assertIsString($context->getDescriptionHash());
@@ -183,7 +157,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                         &$encryptedBallots, &$ballotEncryptionPromises,
                         $i, $fakeBallots, $context
                     ) {
-                        $chunkEncryptedBallots = $this->mediatorAPI()->encryptBallots(
+                        $chunkEncryptedBallots = $this->mediatorAPI->encryptBallots(
                             $this->manifest, $context, array_slice($fakeBallots, (int)$i, (int)($i + 1))
                         );
                         self::assertIsArray($chunkEncryptedBallots);
@@ -207,13 +181,13 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             foreach ($encryptedBallots as $i => $encryptedBallot) {
                 $willCast = $i % 2 === 0;
                 if ($willCast) {
-                    $castedBallot = $this->mediatorAPI()->castBallot($this->manifest, $context, $encryptedBallot);
+                    $castedBallot = $this->mediatorAPI->castBallot($this->manifest, $context, $encryptedBallot);
                     self::assertEquals($encryptedBallot->object_id, $castedBallot->object_id);
                     self::assertEquals("CAST", $castedBallot->state);
                     self::assertInstanceOf(stdClass::class, $encryptedBallot);
                     $castedBallots[] = $castedBallot;
                 } else {
-                    $spoiledBallot = $this->mediatorAPI()->spoilBallot($this->manifest, $context, $encryptedBallot);
+                    $spoiledBallot = $this->mediatorAPI->spoilBallot($this->manifest, $context, $encryptedBallot);
                     self::assertEquals($encryptedBallot->object_id, $spoiledBallot->object_id);
                     self::assertEquals("SPOILED", $spoiledBallot->state);
                     self::assertInstanceOf(stdClass::class, $spoiledBallot);
@@ -230,20 +204,20 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
             echo "[i] Determine tracker words for all ballots" . PHP_EOL;
             foreach (array_merge($castedBallots, $spoiledBallots) as $ballot) {
-                self::assertIsString($this->mediatorAPI()->getTrackerWords($ballot->tracking_hash));
+                self::assertIsString($this->mediatorAPI->getTrackerWords($ballot->tracking_hash));
             }
 
             echo "[i] Start the tally and append to the tally." . PHP_EOL;
-            $tally = $this->mediatorAPI()->tally($this->manifest, $context, array_slice($castedBallots, 0, 1));
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 0, 1));
             self::assertInstanceOf(stdClass::class, $tally);
-            $tally = $this->mediatorAPI()->tally($this->manifest, $context, array_slice($castedBallots, 1), $tally);
+            $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 1), $tally);
             self::assertInstanceOf(stdClass::class, $tally);
 
             echo "[i] Decrypt the tally shares" . PHP_EOL;
             $decryptedTallyShares = [];
             foreach ($guardians as $guardian) {
                 $decryptedShare =
-                    $this->guardianAPI()->decryptTallyShare($this->manifest, $context, $guardian, $tally);
+                    $this->guardianAPI->decryptTallyShare($this->manifest, $context, $guardian, $tally);
                 self::assertInstanceOf(stdClass::class, $decryptedShare);
                 $decryptedTallyShares[$guardian->generateObjectId()] = $decryptedShare;
 
@@ -251,7 +225,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             }
 
             echo "[i] Decrypt the tally" . PHP_EOL;
-            $decryptedTally = $this->mediatorAPI()->decryptTally(
+            $decryptedTally = $this->mediatorAPI->decryptTally(
                 $this->manifest,
                 $context,
                 $tally,
@@ -275,14 +249,14 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $decryptedBallotShares = [];
             foreach ($guardians as $guardian) {
                 $decryptedBallotShare =
-                    $this->guardianAPI()->decryptBallots($context, $guardian, $spoiledBallots);
+                    $this->guardianAPI->decryptBallots($context, $guardian, $spoiledBallots);
                 self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
                 self::assertIsArray($decryptedBallotShare->shares);
                 $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
 
                 echo "[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL;
             }
-            $decryptedSpoiledBallots = $this->mediatorAPI()->decryptBallots(
+            $decryptedSpoiledBallots = $this->mediatorAPI->decryptBallots(
                 $context, $spoiledBallots, $decryptedBallotShares
             );
             foreach ($spoiledBallots as $spoiledBallot) {
