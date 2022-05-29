@@ -10,7 +10,7 @@ class Utilities {
      * @return string snake_case_text
      */
     public static function camelToSnakeCase(string $input): string {
-        $pattern = "!([A-Z][A-Z0-9]*(?=\$|[A-Z][a-z0-9])|[A-Za-z][a-z0-9]+)!";
+        $pattern = "!([A-Z][A-Z\d]*(?=\$|[A-Z][a-z\d])|[A-Za-z][a-z\d]+)!";
         preg_match_all($pattern, $input, $matches);
         $ret = $matches[0];
         foreach ($ret as &$match) {

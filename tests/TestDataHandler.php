@@ -7,7 +7,6 @@ use ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotSelection;
 use ChlodAlejandro\ElectionGuard\Schema\ElectionContext;
-use ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\Candidate;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\ContactInformation;

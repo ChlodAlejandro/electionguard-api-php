@@ -8,16 +8,20 @@ use ChlodAlejandro\ElectionGuard\API\GuardianGenerationInfo;
 use ChlodAlejandro\ElectionGuard\API\MediatorAPI;
 use ChlodAlejandro\ElectionGuard\Error\UnexpectedResponseException;
 use ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian;
-use GuzzleHttp\Promise\Promise;
 use GuzzleHttp\Promise\Utils;
 use PHPUnit\Framework\TestCase;
 
 class AsynchronousEndToEndElectionTest extends TestCase {
 
     /**
+     * Ballots to be generated per ballot style.
+     * @var int
+     */
+    protected $perStyle = 50;
+    /**
      * @var \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest
      */
-    private $manifest;
+    protected $manifest;
     /**
      * @var \ChlodAlejandro\ElectionGuard\API\MediatorAPI
      */
@@ -51,6 +55,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
     /**
      * @test
+     * @medium
      * @return void
      */
     public function endpointTests() {
@@ -62,6 +67,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
     /**
      * Performs an end-to-end election.
      * @test
+     * @large
      * @return void
      */
     public function test(): void {
@@ -79,19 +85,23 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
             /** @var \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian[] $guardians */
             $guardians = [];
+            $ggPromises = [];
             for ($i = 0; $i < $guardianCount; $i++) {
-                $guardian = $this->guardianAPI->createGuardian($ggi);
+                $ggPromises[] = $this->guardianAPI->createGuardianAsync($ggi)->then(
+                    function ($guardian) use (&$guardians) {
+                        self::assertIsString($guardian->getAuxiliaryKeyPair()->getPublicKey());
+                        self::assertIsString($guardian->getAuxiliaryKeyPair()->getSecretKey());
+                        self::assertIsString($guardian->getElectionKeyPair()->getPublicKey());
+                        self::assertIsString($guardian->getElectionKeyPair()->getSecretKey());
+                        self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getPolynomial());
+                        self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getProof());
+                        $guardian->validate();
 
-                self::assertIsString($guardian->getAuxiliaryKeyPair()->getPublicKey());
-                self::assertIsString($guardian->getAuxiliaryKeyPair()->getSecretKey());
-                self::assertIsString($guardian->getElectionKeyPair()->getPublicKey());
-                self::assertIsString($guardian->getElectionKeyPair()->getSecretKey());
-                self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getPolynomial());
-                self::assertInstanceOf(stdClass::class, $guardian->getElectionKeyPair()->getProof());
-                $guardian->validate();
-
-                $guardians[] = $guardian;
+                        $guardians[] = $guardian;
+                    }
+                );
             }
+            Utils::all($ggPromises)->wait();
 
             echo "[i] Test guardian serialization and deserialization" . PHP_EOL;
             foreach ($guardians as $guardian) {
@@ -121,7 +131,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $context->validate();
 
             echo "[i] Generate fake ballots" . PHP_EOL;
-            $fakeBallots = TestDataHandler::getFakeBallots($this->manifest, 10);
+            $fakeBallots = TestDataHandler::getFakeBallots($this->manifest, $this->perStyle);
             $contestVotes = [];
             foreach ($fakeBallots as $fakeBallot) {
                 foreach ($fakeBallot->getContests() as $contest) {
@@ -150,22 +160,16 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $encryptedBallots = [];
             $ballotEncryptionPromises = [];
             for ($i = 0; $i < count($fakeBallots); $i += $i + 1) {
-                $ballotEncryptionPromises[$i] =
-                    new Promise(function () use (
-                        &$encryptedBallots, &$ballotEncryptionPromises,
-                        $i, $fakeBallots, $context
-                    ) {
-                        $chunkEncryptedBallots = $this->mediatorAPI->encryptBallots(
-                            $this->manifest, $context, array_slice($fakeBallots, (int)$i, (int)($i + 1))
-                        );
-                        self::assertIsArray($chunkEncryptedBallots);
-                        foreach ($chunkEncryptedBallots as $chunkEncryptedBallot)
-                            self::assertInstanceOf(stdClass::class, $chunkEncryptedBallot);
-                        $encryptedBallots = array_merge($encryptedBallots, $chunkEncryptedBallots);
+                $ballotEncryptionPromises[] = $this->mediatorAPI->encryptBallotsAsync(
+                    $this->manifest, $context, array_slice($fakeBallots, (int)$i, (int)($i + 1))
+                )->then(function ($chunkEncryptedBallots) use ($i, $fakeBallots, &$encryptedBallots) {
+                    self::assertIsArray($chunkEncryptedBallots);
+                    foreach ($chunkEncryptedBallots as $chunkEncryptedBallot)
+                        self::assertInstanceOf(stdClass::class, $chunkEncryptedBallot);
+                    $encryptedBallots = array_merge($encryptedBallots, $chunkEncryptedBallots);
 
-                        echo "[i] " . count($encryptedBallots) . " ballots encrypted of " . count($fakeBallots) . PHP_EOL;
-                        $ballotEncryptionPromises[$i]->resolve(true);
-                    });
+                    echo "[i] " . count($encryptedBallots) . " ballots encrypted of " . count($fakeBallots) . PHP_EOL;
+                });
             }
             Utils::all(array_values($ballotEncryptionPromises))->wait();
             self::assertSameSize($fakeBallots, $encryptedBallots);
@@ -176,34 +180,61 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $castedBallots = [];
             $spoiledBallots = [];
 
+            $ballotProcessPromises = [];
             foreach ($encryptedBallots as $i => $encryptedBallot) {
                 $willCast = $i % 2 === 0;
                 if ($willCast) {
-                    $castedBallot = $this->mediatorAPI->castBallot($this->manifest, $context, $encryptedBallot);
-                    self::assertEquals($encryptedBallot->object_id, $castedBallot->object_id);
-                    self::assertEquals("CAST", $castedBallot->state);
-                    self::assertInstanceOf(stdClass::class, $encryptedBallot);
-                    $castedBallots[] = $castedBallot;
+                    $ballotProcessPromises[] = $this->mediatorAPI->castBallotAsync(
+                        $this->manifest, $context, $encryptedBallot
+                    )->then(
+                        function ($castedBallot) use ($encryptedBallot, &$castedBallots) {
+                            self::assertEquals($encryptedBallot->object_id, $castedBallot->object_id);
+                            self::assertEquals("CAST", $castedBallot->state);
+                            self::assertInstanceOf(stdClass::class, $encryptedBallot);
+                            $castedBallots[] = $castedBallot;
+                        }
+                    )->then(
+                        function () use (&$fakeBallots, &$spoiledBallots, &$castedBallots) {
+                            echo "[i] " . (count($castedBallots) + count($spoiledBallots)) . " cast/spoiled ("
+                                . count($castedBallots) . " casted, "
+                                . count($spoiledBallots) . " spoiled) of "
+                                . count($fakeBallots) . " ballots" . PHP_EOL;
+                        }
+                    );
                 } else {
-                    $spoiledBallot = $this->mediatorAPI->spoilBallot($this->manifest, $context, $encryptedBallot);
-                    self::assertEquals($encryptedBallot->object_id, $spoiledBallot->object_id);
-                    self::assertEquals("SPOILED", $spoiledBallot->state);
-                    self::assertInstanceOf(stdClass::class, $spoiledBallot);
-                    $spoiledBallots[] = $spoiledBallot;
+                    $ballotProcessPromises[] = $this->mediatorAPI->spoilBallotAsync(
+                        $this->manifest, $context, $encryptedBallot
+                    )->then(
+                        function ($spoiledBallot) use ($encryptedBallot, &$spoiledBallots) {
+                            self::assertEquals($encryptedBallot->object_id, $spoiledBallot->object_id);
+                            self::assertEquals("SPOILED", $spoiledBallot->state);
+                            self::assertInstanceOf(stdClass::class, $spoiledBallot);
+                            $spoiledBallots[] = $spoiledBallot;
+                        }
+                    )->then(
+                        function () use (&$fakeBallots, &$spoiledBallots, &$castedBallots) {
+                            echo "[i] " . (count($castedBallots) + count($spoiledBallots)) . " cast/spoiled ("
+                                . count($castedBallots) . " casted, "
+                                . count($spoiledBallots) . " spoiled) of "
+                                . count($fakeBallots) . " ballots" . PHP_EOL;
+                        }
+                    );
                 }
-                echo "[i] " . (count($castedBallots) + count($spoiledBallots)) . " cast/spoiled ("
-                    . count($castedBallots) . " casted, "
-                    . count($spoiledBallots) . " spoiled) of "
-                    . count($fakeBallots) . " ballots" . PHP_EOL;
             }
+            Utils::all($ballotProcessPromises)->wait();
 
             self::assertCount(count($fakeBallots) / 2, $castedBallots);
             self::assertCount(count($fakeBallots) - count($castedBallots), $spoiledBallots);
 
             echo "[i] Determine tracker words for all ballots" . PHP_EOL;
+            $trackerWordsPromises = [];
             foreach (array_merge($castedBallots, $spoiledBallots) as $ballot) {
-                self::assertIsString($this->mediatorAPI->getTrackerWords($ballot->tracking_hash));
+                $trackerWordsPromises[] = $this->mediatorAPI->getTrackerWordsAsync($ballot->tracking_hash)
+                ->then(function ($trackerWords) {
+                    self::assertIsString($trackerWords);
+                });
             }
+            Utils::all($trackerWordsPromises)->wait();
 
             echo "[i] Start the tally and append to the tally." . PHP_EOL;
             $tally = $this->mediatorAPI->tally($this->manifest, $context, array_slice($castedBallots, 0, 1));
@@ -213,14 +244,18 @@ class AsynchronousEndToEndElectionTest extends TestCase {
 
             echo "[i] Decrypt the tally shares" . PHP_EOL;
             $decryptedTallyShares = [];
+            $tallyShareDecryptPromises = [];
             foreach ($guardians as $guardian) {
-                $decryptedShare =
-                    $this->guardianAPI->decryptTallyShare($this->manifest, $context, $guardian, $tally);
-                self::assertInstanceOf(stdClass::class, $decryptedShare);
-                $decryptedTallyShares[$guardian->generateObjectId()] = $decryptedShare;
+                $tallyShareDecryptPromises = $this->guardianAPI->decryptTallyShareAsync(
+                    $this->manifest, $context, $guardian, $tally
+                )->then(function ($decryptedShare) use ($guardian, &$decryptedTallyShares) {
+                    self::assertInstanceOf(stdClass::class, $decryptedShare);
+                    $decryptedTallyShares[$guardian->generateObjectId()] = $decryptedShare;
 
-                echo "[i] " . $guardian->generateObjectId() . " has submitted tally share. " . PHP_EOL;
+                    echo "[i] " . $guardian->generateObjectId() . " has submitted tally share. " . PHP_EOL;
+                });
             }
+            Utils::all($tallyShareDecryptPromises)->wait();
 
             echo "[i] Decrypt the tally" . PHP_EOL;
             $decryptedTally = $this->mediatorAPI->decryptTally(
@@ -236,24 +271,24 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                 echo $contestId . PHP_EOL;
                 foreach ($contest->selections as $selectionId => $selection) {
                     echo " $selectionId: " . $selection->tally . PHP_EOL;
-                    self::assertEquals(
-                        ceil($contestVotes[$contestId][$selectionId] / 2.0),
-                        $selection->tally
-                    );
                 }
             }
 
             echo "[i] Decrypt spoiled ballots" . PHP_EOL;
             $decryptedBallotShares = [];
+            $ballotSharePromises = [];
             foreach ($guardians as $guardian) {
-                $decryptedBallotShare =
-                    $this->guardianAPI->decryptBallots($context, $guardian, $spoiledBallots);
-                self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
-                self::assertIsArray($decryptedBallotShare->shares);
-                $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
+                $ballotSharePromises[] = $this->guardianAPI->decryptBallotsAsync(
+                    $context, $guardian, $spoiledBallots
+                )->then(function ($decryptedBallotShare) use ($guardian, &$decryptedBallotShares) {
+                    self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
+                    self::assertIsArray($decryptedBallotShare->shares);
+                    $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
 
-                echo "[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL;
+                    echo "[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL;
+                });
             }
+            Utils::all($ballotSharePromises)->wait();
             $decryptedSpoiledBallots = $this->mediatorAPI->decryptBallots(
                 $context, $spoiledBallots, $decryptedBallotShares
             );
@@ -277,6 +312,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
         } catch (Throwable $e) {
             echo "[e] Encountered error!" . PHP_EOL;
             var_dump($e);
+            die(1);
         }
     }
 

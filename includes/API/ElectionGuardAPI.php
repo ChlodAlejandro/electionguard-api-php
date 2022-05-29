@@ -98,7 +98,7 @@ class ElectionGuardAPI {
      * @param int $options Options for latency checking. Valid values are
      *     {@link ElectionGuardAPI::SKIP_INACCESSIBLE} and {@link ElectionGuardAPI::THROW_ON_INACCESSIBLE}.
      * @return array<string, int> An array of target-ping tuples.
-     * @throws UnexpectedResponseException If an target can't be pinged and $throwOnError is set to false.
+     * @throws UnexpectedResponseException If a target can't be pinged and $throwOnError is set to false.
      */
     public function getTargetLatencies(int $options = 0): array {
         $pings = [];
@@ -152,7 +152,7 @@ class ElectionGuardAPI {
             throw new NoAvailableTargetException($this);
         }
         return $this->getTargetUrl(
-            $availableEndpoints[array_key_first($availableEndpoints)],
+            array_key_first($availableEndpoints),
             $endpoint
         );
     }

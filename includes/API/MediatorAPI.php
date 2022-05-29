@@ -167,7 +167,7 @@ class MediatorAPI extends ElectionGuardAPI {
         Manifest $manifest,
         ElectionContext $context,
         array $ballots,
-        ?int $seedHash
+        ?int $seedHash = null
     ): PromiseInterface {
         if (!isset($seedHash) && !isset($this->seedHash))
             $this->seedHash = random_int(0, PHP_INT_MAX);
@@ -433,7 +433,7 @@ class MediatorAPI extends ElectionGuardAPI {
      * @param stdClass $tally
      * @param array $decryptedTallyShares
      * @return PromiseInterface
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException
      */
     public function decryptTallyAsync(
         Manifest $manifest,
@@ -467,7 +467,7 @@ class MediatorAPI extends ElectionGuardAPI {
      * @param stdClass $tally
      * @param array $decryptedTallyShares
      * @return stdClass
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws \ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException
      */
     public function decryptTally(
         Manifest $manifest,
