@@ -285,6 +285,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $decryptedSpoiledBallots = [];
             for ($i = 0; $i < count($spoiledBallots); $i += 10) {
                 $spoiledBallotsBatch = array_slice($spoiledBallots, $i, 10);
+                $decryptedBallotShares = [];
 
                 $ballotSharePromises = [];
                 foreach ($guardians as $guardian) {
@@ -300,7 +301,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                 }
                 Utils::all($ballotSharePromises)->wait();
                 $decryptedSpoiledBallotBatch = $this->mediatorAPI->decryptBallots(
-                    $context, $spoiledBallotsBatch, $spoiledBallotsBatch
+                    $context, $spoiledBallotsBatch, $decryptedBallotShares
                 );
                 foreach ($spoiledBallotsBatch as $spoiledBallot) {
                     $ballotId = $spoiledBallot->object_id;
