@@ -164,9 +164,9 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             $this->log("[i] Encrypt ballots" . PHP_EOL);
             $encryptedBallots = [];
             $ballotEncryptionPromises = [];
-            for ($i = 0; $i < count($fakeBallots); $i += $i + 1) {
+            for ($i = 0; $i < count($fakeBallots); $i += 10) {
                 $ballotEncryptionPromises[] = $this->mediatorAPI->encryptBallotsAsync(
-                    $this->manifest, $context, array_slice($fakeBallots, (int)$i, (int)($i + 1))
+                    $this->manifest, $context, array_slice($fakeBallots, $i, 10)
                 )->then(function ($chunkEncryptedBallots) use ($i, $fakeBallots, &$encryptedBallots) {
                     self::assertIsArray($chunkEncryptedBallots);
                     foreach ($chunkEncryptedBallots as $chunkEncryptedBallot)
@@ -237,6 +237,8 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                 $trackerWordsPromises[] = $this->mediatorAPI->getTrackerWordsAsync($ballot->tracking_hash)
                 ->then(function ($trackerWords) {
                     self::assertIsString($trackerWords);
+                }, function () use ($ballot) {
+                    $this->log("[e] Failed to get tracker words for ballot: " . $ballot->tracking_hash);
                 });
             }
             Utils::all($trackerWordsPromises)->wait();
@@ -280,32 +282,39 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             }
 
             $this->log("[i] Decrypt spoiled ballots" . PHP_EOL);
-            $decryptedBallotShares = [];
-            $ballotSharePromises = [];
-            foreach ($guardians as $guardian) {
-                $ballotSharePromises[] = $this->guardianAPI->decryptBallotsAsync(
-                    $context, $guardian, $spoiledBallots
-                )->then(function ($decryptedBallotShare) use ($guardian, &$decryptedBallotShares) {
-                    self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
-                    self::assertIsArray($decryptedBallotShare->shares);
-                    $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
+            $decryptedSpoiledBallots = [];
+            for ($i = 0; $i < count($spoiledBallots); $i += 10) {
+                $spoiledBallotsBatch = array_slice($spoiledBallots, $i, 10);
 
-                    $this->log("[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL);
-                });
-            }
-            Utils::all($ballotSharePromises)->wait();
-            $decryptedSpoiledBallots = $this->mediatorAPI->decryptBallots(
-                $context, $spoiledBallots, $decryptedBallotShares
-            );
-            foreach ($spoiledBallots as $spoiledBallot) {
-                $ballotId = $spoiledBallot->object_id;
-                $spoiledBallot->contests = $decryptedSpoiledBallots->$ballotId;
+                $ballotSharePromises = [];
+                foreach ($guardians as $guardian) {
+                    $ballotSharePromises[] = $this->guardianAPI->decryptBallotsAsync(
+                        $context, $guardian, $spoiledBallotsBatch
+                    )->then(function ($decryptedBallotShare) use ($guardian, &$decryptedBallotShares) {
+                        self::assertInstanceOf(stdClass::class, $decryptedBallotShare);
+                        self::assertIsArray($decryptedBallotShare->shares);
+                        $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
+
+                        $this->log("[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL);
+                    });
+                }
+                Utils::all($ballotSharePromises)->wait();
+                $decryptedSpoiledBallotBatch = $this->mediatorAPI->decryptBallots(
+                    $context, $spoiledBallotsBatch, $spoiledBallotsBatch
+                );
+                foreach ($spoiledBallotsBatch as $spoiledBallot) {
+                    $ballotId = $spoiledBallot->object_id;
+                    $spoiledBallot->contests = $decryptedSpoiledBallotBatch->$ballotId;
+                    $decryptedSpoiledBallots[] = $spoiledBallot;
+                }
+
+                $this->log("[i] Decrypted batch " . ($i / 10) . " of " . ceil((float) count($spoiledBallots) / $i) . "." . PHP_EOL);
             }
 
             $this->log("[i] Save the election record" . PHP_EOL);
             TestDataHandler::saveElectionRecord(
                 get_class($this), $this->manifest, $context, $guardians,
-                $castedBallots, $spoiledBallots, $tally, $decryptedTally, $constants
+                $castedBallots, $decryptedSpoiledBallots, $tally, $decryptedTally, $constants
             );
         } catch (UnexpectedResponseException $e) {
             $this->log("[e] Encountered error!" . PHP_EOL);
