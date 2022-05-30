@@ -10,6 +10,7 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
+            max-parallel: 2
             fail-fast: false
             matrix:
                 version: ['7.3', '7.4', '8.0', '8.1']
@@ -21,24 +22,6 @@ jobs:
                     API_MODE: mediator
                 ports:
                     - "8000:8000"
-            electionguard-mediator-2:
-                image: electionguard/electionguard-web-api
-                env:
-                    API_MODE: mediator
-                ports:
-                    - "8001:8000"
-            electionguard-mediator-3:
-                image: electionguard/electionguard-web-api
-                env:
-                    API_MODE: mediator
-                ports:
-                    - "8002:8000"
-            electionguard-mediator-4:
-                image: electionguard/electionguard-web-api
-                env:
-                    API_MODE: mediator
-                ports:
-                    - "8003:8000"
             electionguard-guardian:
                 image: electionguard/electionguard-web-api
                 env:
@@ -58,7 +41,7 @@ jobs:
             -   name: Perform tests
                 run: composer run-script --timeout 600 test -- --do-not-cache-result
                 env:
-                    ELECTIONGUARD_MEDIATOR_HOST: 127.0.0.1:8000;127.0.0.1:8001;127.0.0.1:8002;127.0.0.1:8003
+                    ELECTIONGUARD_MEDIATOR_HOST: 127.0.0.1:8000
                     ELECTIONGUARD_GUARDIAN_HOST: 127.0.0.1:9000
 
             -   name: Upload generated election records
