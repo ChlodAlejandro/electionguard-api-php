@@ -56,7 +56,7 @@ jobs:
                     progress: yes
 
             -   name: Perform tests
-                run: composer run-script test -- --do-not-cache-result
+                run: composer run-script test -- --timeout 600 --do-not-cache-result
                 env:
                     ELECTIONGUARD_MEDIATOR_HOST: 127.0.0.1:8000;127.0.0.1:8001;127.0.0.1:8002;127.0.0.1:8003
                     ELECTIONGUARD_GUARDIAN_HOST: 127.0.0.1:9000
