@@ -10,8 +10,9 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
+            fail-fast: false
             matrix:
-                version: ['7.3', '8', '8.1']
+                version: ['7.3', '7.4', '8.0', '8.1']
 
         services:
             electionguard-mediator-1:
