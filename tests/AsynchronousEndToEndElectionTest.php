@@ -238,7 +238,7 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                 ->then(function ($trackerWords) {
                     self::assertIsString($trackerWords);
                 }, function () use ($ballot) {
-                    $this->log("[e] Failed to get tracker words for ballot: " . $ballot->tracking_hash);
+                    $this->log("[e] Failed to get tracker words for ballot: " . $ballot->tracking_hash . PHP_EOL);
                 });
             }
             Utils::all($trackerWordsPromises)->wait();
@@ -282,6 +282,15 @@ class AsynchronousEndToEndElectionTest extends TestCase {
             }
 
             $this->log("[i] Decrypt spoiled ballots" . PHP_EOL);
+            $spoiledBallotMap = (function () use ($spoiledBallots) {
+                $spoiledBallotMap = [];
+
+                foreach ($spoiledBallots as $spoiledBallot) {
+                    $spoiledBallotMap[(string) $spoiledBallot->object_id] = $spoiledBallot;
+                }
+
+                return $spoiledBallotMap;
+            })();
             $decryptedSpoiledBallots = [];
             for ($i = 0; $i < count($spoiledBallots); $i += 10) {
                 $spoiledBallotsBatch = array_slice($spoiledBallots, $i, 10);
@@ -296,26 +305,27 @@ class AsynchronousEndToEndElectionTest extends TestCase {
                         self::assertIsArray($decryptedBallotShare->shares);
                         $decryptedBallotShares[$guardian->generateObjectId()] = $decryptedBallotShare->shares;
 
-                        $this->log("[i] " . $guardian->generateObjectId() . " has submitted ballot share. " . PHP_EOL);
+                        $this->log("[i] " . $guardian->generateObjectId() . " has submitted ballot share." . PHP_EOL);
                     });
                 }
                 Utils::all($ballotSharePromises)->wait();
+                $this->log("[i] Decrypted shares for batch " . (($i / 10) + 1) . " of " . ceil((float) count($spoiledBallots) / 10) . "." . PHP_EOL);
                 $decryptedSpoiledBallotBatch = $this->mediatorAPI->decryptBallots(
                     $context, $spoiledBallotsBatch, $decryptedBallotShares
                 );
-                foreach ($spoiledBallotsBatch as $spoiledBallot) {
-                    $ballotId = $spoiledBallot->object_id;
+                foreach ($decryptedSpoiledBallotBatch as $decryptedSpoiledBallotId => $decryptedSpoiledBallot) {
+                    $spoiledBallot = $spoiledBallotMap[$decryptedSpoiledBallotId];
+                    $ballotId = (string) $spoiledBallot->object_id;
                     $spoiledBallot->contests = $decryptedSpoiledBallotBatch->$ballotId;
-                    $decryptedSpoiledBallots[] = $spoiledBallot;
                 }
 
-                $this->log("[i] Decrypted batch " . ($i / 10) . " of " . ceil((float) count($spoiledBallots) / $i) . "." . PHP_EOL);
+                $this->log("[i] Decrypted batch " . (($i / 10) + 1) . " of " . ceil((float) count($spoiledBallots) / 10) . "." . PHP_EOL);
             }
 
             $this->log("[i] Save the election record" . PHP_EOL);
             TestDataHandler::saveElectionRecord(
                 get_class($this), $this->manifest, $context, $guardians,
-                $castedBallots, $decryptedSpoiledBallots, $tally, $decryptedTally, $constants
+                $castedBallots, array_values($spoiledBallotMap), $tally, $decryptedTally, $constants
             );
         } catch (UnexpectedResponseException $e) {
             $this->log("[e] Encountered error!" . PHP_EOL);
