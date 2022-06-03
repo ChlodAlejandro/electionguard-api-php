@@ -2,19 +2,37 @@
 
 namespace ChlodAlejandro\ElectionGuard\API;
 
+use ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException;
 use ChlodAlejandro\ElectionGuard\Error\UnexpectedResponseException;
+use ChlodAlejandro\ElectionGuard\Utilities;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\BadResponseException;
-use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Promise\Utils;
+use Throwable;
 
 class ElectionGuardAPI {
 
     /**
-     * An array of API endpoint roots, which are randomly selected from whenever
-     * a request is to be made.
+     * Relative path to a specific version of the endpoint.
+     * Use leading slashes. Do not use trailing slashes.
+     */
+    public const apiPath = "/api/v1";
+
+    /**
+     * Skip inaccessible endpoints when checking for endpoint latencies.
+     */
+    public const SKIP_INACCESSIBLE = 1;
+    /**
+     * Throw on inaccessible endpoints when checking for endpoint latencies.
+     */
+    public const THROW_ON_INACCESSIBLE = 2;
+
+    /**
+     * An array of API targets available to this API manager.
      * @var string[]
      */
-    private $endpoints;
+    private $targets;
     /**
      * Guzzle HTTP client for this mediator handler.
      * @var \GuzzleHttp\Client
@@ -22,14 +40,20 @@ class ElectionGuardAPI {
     protected $client;
 
     /**
+     * The latencies of each target. Gathered through {@link ElectionGuardAPI::getTargetLatencies()}.
+     * @var array
+     */
+    public $endpointLatencies;
+
+    /**
      * Creates a Mediator endpoint instance.
      * @param string[]|string $endpoints
      */
     public function __construct($endpoints, array $clientOptions = []) {
         if (is_array($endpoints))
-            $this->endpoints = $endpoints;
+            $this->targets = $endpoints;
         else
-            $this->endpoints = [$endpoints];
+            $this->targets = [$endpoints];
 
         $this->client = new Client(array_merge_recursive(
             [
@@ -43,61 +67,132 @@ class ElectionGuardAPI {
     }
 
     /**
-     * Pick a random endpoint root and get the URL to a specific endpoint.
-     * @param ?string $endpoint The endpoint to choose.
-     * @return string
+     * @return string[]
      */
-    protected function pickEndpoint(?string $endpoint): string {
-        return $this->endpoints[array_rand($this->endpoints)]
-            . ($endpoint ? "/api/v1/" . $endpoint : "");
+    public function getTargets(): array {
+        return $this->targets;
     }
 
     /**
-     * @param string $endpoint
-     * @param callable $callback
-     * @param callable|null $failureCallback
-     * @return mixed
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * Gets the normalized URL for a target and endpoint. This ensures that the
+     * URL has no trailing slashes and that query parameters were preserved.
+     *
+     * @param string $target The target to get the URL for.
+     * @return string The URL of the endpoint.
      */
-    function execute(
-        string                       $endpoint,
-        callable          $callback,
-        ?callable $failureCallback = null
-    ) {
-        try {
-            return $callback($this->pickEndpoint($endpoint));
-        } catch (GuzzleException $e) {
-            if (isset($failureCallback)) {
-                return $failureCallback($e);
-            } else if ($e instanceof BadResponseException) {
-                $response = $e->getResponse();
-                throw new UnexpectedResponseException(
-                    "Failed to parse response from mediator.",
-                    $e,
-                    $response
+    public function getTargetUrl(string $target, string $endpoint = ""): string {
+        $url = parse_url($target);
+        $sanitizedPath = ltrim($endpoint, "/");
+        $url["path"] = empty($url["path"])
+            ? ElectionGuardAPI::apiPath . '/' . $sanitizedPath
+            : rtrim($url["path"], "/") . ElectionGuardAPI::apiPath . '/' . $sanitizedPath;
+        return Utilities::unparse_url($url);
+    }
+
+    /**
+     * Gets the average ping for each target and returns all the targets
+     * and their resulting pings in an associative array, sorted from lowest
+     * to highest ping in milliseconds. If a target cannot be pinged and
+     * $throwOnError is set to false, the endpoint will have a ping of INF.
+     *
+     * @param int $options Options for latency checking. Valid values are
+     *     {@link ElectionGuardAPI::SKIP_INACCESSIBLE} and {@link ElectionGuardAPI::THROW_ON_INACCESSIBLE}.
+     * @return array<string, int> An array of target-ping tuples.
+     * @throws UnexpectedResponseException If a target can't be pinged and $throwOnError is set to false.
+     */
+    public function getTargetLatencies(int $options = 0): array {
+        $pings = [];
+        $pingPromises = [];
+        foreach ($this->targets as $target) {
+            $startTime = microtime(true);
+            $pingPromises[] = $this->client->getAsync($this->getTargetUrl($target, "ping"))
+                ->then(
+                    function () use (&$pings, $target, $startTime) {
+                        $pings[$target] = (int) ((microtime(true) - $startTime) * 1000);
+                    },
+                    function () use (&$pings, $target, $options) {
+                        if ($options & ElectionGuardAPI::THROW_ON_INACCESSIBLE) {
+                            throw new UnexpectedResponseException(
+                                "Failed to ping endpoint: " . $target
+                            );
+                        } else {
+                            $pings[$target] = INF;
+                        }
+                    }
                 );
-            } else {
-                throw $e;
-            }
+        }
+        Utils::all($pingPromises)->wait();
+
+        uasort($pings, function ($a, $b) {
+            return $a - $b;
+        });
+        if ($options & ElectionGuardAPI::SKIP_INACCESSIBLE) {
+            return array_filter($pings, function ($ping) {
+                return $ping !== INF;
+            });
+        } else {
+            return $this->endpointLatencies = $pings;
         }
     }
 
     /**
-     * Check if the API can be pinged.
-     * @param int $timeout The time to wait for the response.
-     * @return bool
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * Pick a random target and get the URL to a specific endpoint.
+     * @param ?string $endpoint The endpoint to choose.
+     * @return string
+     * @throws \ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException
      */
-    public function ping(int $timeout = 1): bool {
-        return $this->execute("ping", function($url) use ($timeout) {
-            $response = $this->client->get($url, [
-                'timeout' => $timeout,
-                'connect_timeout' => $timeout,
-            ]);
-            $decodedResponse = json_decode($response->getBody());
-
-            return $decodedResponse === "pong";
+    protected function pickTarget(?string $endpoint): string {
+        if ($this->endpointLatencies == null) {
+            $this->getTargetLatencies();
+        }
+        $availableEndpoints = array_filter($this->endpointLatencies, function ($ping) {
+            return $ping !== INF;
         });
+        if (count($availableEndpoints) == 0) {
+            throw new NoAvailableTargetException($this);
+        }
+        return $this->getTargetUrl(
+            array_key_first($availableEndpoints),
+            $endpoint
+        );
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    private function processRequestException(Throwable $e): void {
+        if ($e instanceof BadResponseException) {
+            $response = $e->getResponse();
+            throw new UnexpectedResponseException(
+                "Failed to parse response from mediator.",
+                $e,
+                $response
+            );
+        } else {
+            throw $e;
+        }
+    }
+
+    /**
+     * @param string $endpoint The endpoint to access
+     * @param array $requestOptions The request options for this request
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     * @throws \ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException
+     */
+    function get(string $endpoint, array $requestOptions = []): PromiseInterface {
+        return $this->client->getAsync($this->pickTarget($endpoint), $requestOptions)
+            ->then(null, function ($e) { $this->processRequestException($e); });
+    }
+
+    /**
+     * @param string $endpoint The endpoint to access
+     * @param array $requestOptions The request options for this request
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     * @throws \ChlodAlejandro\ElectionGuard\Error\NoAvailableTargetException
+     */
+    function post(string $endpoint, array $requestOptions = []): PromiseInterface {
+        return $this->client->postAsync($this->pickTarget($endpoint), $requestOptions)
+            ->then(null, function ($e) { $this->processRequestException($e); });
     }
 
 }

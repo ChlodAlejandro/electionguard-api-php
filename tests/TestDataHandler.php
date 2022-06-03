@@ -7,7 +7,6 @@ use ChlodAlejandro\ElectionGuard\Schema\Ballot\Ballot;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest;
 use ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotSelection;
 use ChlodAlejandro\ElectionGuard\Schema\ElectionContext;
-use ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\BallotStyle;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\Candidate;
 use ChlodAlejandro\ElectionGuard\Schema\Manifest\ContactInformation;
@@ -199,6 +198,7 @@ class TestDataHandler {
     }
 
     /**
+     * @param string $name The name of the test.
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Manifest $manifest
      * @param \ChlodAlejandro\ElectionGuard\Schema\ElectionContext $context
      * @param \ChlodAlejandro\ElectionGuard\Schema\Guardian\Guardian[] $guardians
@@ -211,6 +211,7 @@ class TestDataHandler {
      * @return void
      */
     public static function saveElectionRecord(
+        string          $name,
         Manifest        $manifest,
         ElectionContext $context,
         array           $guardians,
@@ -222,7 +223,7 @@ class TestDataHandler {
         ?stdClass       $coefficients = null
     ) {
         ElectionRecord::save(
-            __DIR__ . DIRECTORY_SEPARATOR . "work",
+            __DIR__ . DIRECTORY_SEPARATOR . "work" . DIRECTORY_SEPARATOR . $name,
             $manifest, $context, $guardians, $castedBallots, $decryptedSpoiledBallots,
             $encryptedTally, $tally, $constants, $coefficients
         );

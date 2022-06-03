@@ -17,7 +17,7 @@ class BallotContest implements ISerializable {
     /**
      * @return \ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest
      */
-    public function getContest(): \ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest {
+    public function getContest(): Contest {
         return $this->contest;
     }
 
@@ -32,7 +32,7 @@ class BallotContest implements ISerializable {
      * @param \ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest $contest
      * @return \ChlodAlejandro\ElectionGuard\Schema\Ballot\BallotContest
      */
-    public function setContest(\ChlodAlejandro\ElectionGuard\Schema\Manifest\Contest $contest): BallotContest {
+    public function setContest(Contest $contest): BallotContest {
         $this->contest = $contest;
 
         return $this;

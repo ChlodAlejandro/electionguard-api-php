@@ -10,6 +10,8 @@ use RuntimeException;
 
 class UnexpectedResponseException extends RuntimeException {
 
+    /** @var \GuzzleHttp\Exception\BadResponseException */
+    public $previous;
     /** @var \Psr\Http\Message\RequestInterface|null */
     public $request;
     /** @var \GuzzleHttp\Psr7\Response|null */

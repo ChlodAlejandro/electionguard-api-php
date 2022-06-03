@@ -10,7 +10,7 @@ class Utilities {
      * @return string snake_case_text
      */
     public static function camelToSnakeCase(string $input): string {
-        $pattern = "!([A-Z][A-Z0-9]*(?=\$|[A-Z][a-z0-9])|[A-Za-z][a-z0-9]+)!";
+        $pattern = "!([A-Z][A-Z\d]*(?=\$|[A-Z][a-z\d])|[A-Za-z][a-z\d]+)!";
         preg_match_all($pattern, $input, $matches);
         $ret = $matches[0];
         foreach ($ret as &$match) {
@@ -29,6 +29,25 @@ class Utilities {
      */
     public static function filter($value): string {
         return isset($value);
+    }
+
+    /**
+     * Convert a URL parsed with `parse_url` to a string.
+     *
+     * @param $parsed_url array The parsed URL
+     * @return string The resultant string
+     */
+    public static function unparse_url(array $parsed_url): string {
+        $scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : '';
+        $host     = $parsed_url['host'] ?? '';
+        $port     = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '';
+        $user     = $parsed_url['user'] ?? '';
+        $pass     = isset($parsed_url['pass']) ? ':' . $parsed_url['pass']  : '';
+        $pass     = ($user || $pass) ? "$pass@" : '';
+        $path     = $parsed_url['path'] ?? '';
+        $query    = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : '';
+        $fragment = isset($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : '';
+        return "$scheme$user$pass$host$port$path$query$fragment";
     }
 
 }
