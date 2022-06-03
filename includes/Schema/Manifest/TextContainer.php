@@ -101,4 +101,24 @@ class TextContainer implements ISerializable {
         return isset($this->text[0]) ? $this->text[0]->value : null;
     }
 
+    public function set(string $language, string $text): TextContainer {
+        if ($this->text == null)
+            $this->text = [
+                new LocalizedText($language, $text)
+            ];
+        else {
+            $existingValues = array_filter($this->text, function (LocalizedText $text) use ($language) {
+                return strtolower($text->language) === strtolower($language);
+            });
+            foreach ($existingValues as $value) {
+                $existingIndex = array_search($value, $this->text);
+                unset($this->text[$existingIndex]);
+            }
+
+            $this->addText(new LocalizedText($language, $text));
+        }
+
+        return $this;
+    }
+
 }
