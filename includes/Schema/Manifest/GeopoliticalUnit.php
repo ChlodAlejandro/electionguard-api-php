@@ -77,7 +77,7 @@ class GeopoliticalUnit implements ISerializable {
         return $this;
     }
 
-    public function getContactInformation(): ContactInformation {
+    public function getContactInformation(): ?ContactInformation {
         return $this->contactInformation;
     }
 
