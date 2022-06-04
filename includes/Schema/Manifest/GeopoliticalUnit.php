@@ -45,7 +45,7 @@ class GeopoliticalUnit implements ISerializable {
 
     /**
      * Represents geopolitical unit contact information.
-     * @var ContactInformation
+     * @var ?ContactInformation
      */
     public $contactInformation;
 
@@ -81,7 +81,7 @@ class GeopoliticalUnit implements ISerializable {
         return $this->contactInformation;
     }
 
-    public function setContactInformation(ContactInformation $contactInformation): GeopoliticalUnit {
+    public function setContactInformation(?ContactInformation $contactInformation): GeopoliticalUnit {
         $this->contactInformation = $contactInformation;
 
         return $this;
