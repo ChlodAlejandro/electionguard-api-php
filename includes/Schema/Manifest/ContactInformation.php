@@ -38,7 +38,8 @@ class ContactInformation implements IDeserializable {
         $contactInformation = new ContactInformation();
 
         $contactInformation->name = $data["name"];
-        $contactInformation->addressLine = $data["address_line"];
+        if (isset($data["address_line"]))
+            $contactInformation->addressLine = $data["address_line"];
         if (isset($data["email"]))
             $contactInformation->email = SerializableUtils::deserializeArray(function ($data) {
                 return new Email($data["annotation"], $data["value"]);
