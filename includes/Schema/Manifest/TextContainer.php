@@ -37,7 +37,7 @@ class TextContainer implements ISerializable {
             }
         }
 
-        return Utilities::camelToSnakeCase($text);
+        return Utilities::idSafe($text);
     }
 
     public function addText(LocalizedText $text): TextContainer {

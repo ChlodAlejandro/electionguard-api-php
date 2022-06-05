@@ -73,7 +73,7 @@ class Contest implements ISerializable {
      * @return string
      */
     public function generateObjectId(): string {
-        return Utilities::camelToSnakeCase($this->name);
+        return Utilities::idSafe($this->name);
     }
 
     /**

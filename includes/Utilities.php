@@ -5,21 +5,15 @@ namespace ChlodAlejandro\ElectionGuard;
 class Utilities {
 
     /**
-     * Converts text from camel case to snake case.
+     * Makes text safe to put in an ID.
      * @param $input string camelCaseText
      * @return string snake_case_text
      */
-    public static function camelToSnakeCase(string $input): string {
-        $pattern = "!([A-Z][A-Z\d]*(?=\$|[A-Z][a-z\d])|[A-Za-z][a-z\d]+)!";
-        preg_match_all($pattern, $input, $matches);
-        $ret = $matches[0];
-        foreach ($ret as &$match) {
-            $match = $match == strtoupper($match) ?
-                strtolower($match) :
-                lcfirst($match);
-        }
+    public static function idSafe(string $input): string {
+        $hash = sha1($input);
 
-        return implode('_', $ret);
+        return preg_replace('/[a-z\d_\-]/i', '_', $input)
+            . "-" . substr($hash, 0, 6);
     }
 
     /**
