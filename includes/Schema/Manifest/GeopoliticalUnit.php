@@ -103,7 +103,9 @@ class GeopoliticalUnit implements ISerializable {
             "object_id" => $this->generateObjectId(),
             "name" => $this->name,
             "type" => $this->type,
-            "contact_information" => $this->contactInformation->serialize()
+            "contact_information" => $this->contactInformation
+                ? $this->contactInformation->serialize()
+                : null
         ], function ($v) {
             return Utilities::filter($v);
         });
