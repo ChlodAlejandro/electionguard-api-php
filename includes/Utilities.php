@@ -12,7 +12,7 @@ class Utilities {
     public static function idSafe(string $input): string {
         $hash = sha1($input);
 
-        return preg_replace('/[a-z\d_\-]/i', '_', $input)
+        return preg_replace('/[^a-z\d_\-]/i', '_', $input)
             . "-" . substr($hash, 0, 6);
     }
 
