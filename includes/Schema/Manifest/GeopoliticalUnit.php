@@ -119,8 +119,6 @@ class GeopoliticalUnit implements ISerializable {
             throw new InvalidDefinitionException("Manifest name is null.");
         if (!isset($this->type))
             throw new InvalidDefinitionException("Type is null.");
-        if (!isset($this->contactInformation))
-            throw new InvalidDefinitionException("Geopolitical contact information is null.");
 
         if (strlen($this->name) > 256) {
             throw new InvalidDefinitionException("Geopolitical unit name is longer than 256 bytes.");
@@ -128,7 +126,10 @@ class GeopoliticalUnit implements ISerializable {
         if (!in_array($this->type, self::allowedTypes)) {
             throw new InvalidDefinitionException("Invalid geopolitical unit type.");
         }
-        $this->contactInformation->validate();
+
+        if (isset($this->contactInformation)) {
+            $this->contactInformation->validate();
+        }
 
         return true;
     }
